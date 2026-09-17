@@ -274,6 +274,16 @@ body {
 .maplibregl-ctrl-group button + button {
   border-top: 1px solid var(--line) !important;
 }
+/* MapLibre's zoom buttons are 29px, which is too small to hit reliably with a
+   thumb. Raised only for coarse pointers, so the desktop control keeps its
+   compact proportions. */
+@media (pointer: coarse) {
+  .maplibregl-ctrl-group button {
+    width: 40px !important;
+    height: 40px !important;
+  }
+}
+
 .maplibregl-ctrl-attrib a { color: var(--ink-faint) !important; }
 .maplibregl-ctrl-bottom-left { display: none; }
 .maplibregl-canvas { outline: none; }

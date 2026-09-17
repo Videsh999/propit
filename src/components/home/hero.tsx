@@ -219,7 +219,7 @@ export function Hero({ localities }: { localities: LocalityLite[] }) {
 
             <button
               onClick={() => setFiltersOpen(true)}
-              className="mt-4 inline-flex h-8 items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-ink"
+              className="mt-4 inline-flex h-10 items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-ink sm:h-8"
             >
               <SlidersHorizontal size={13} strokeWidth={1.75} />
               More filters

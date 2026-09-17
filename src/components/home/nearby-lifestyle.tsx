@@ -134,11 +134,22 @@ export function NearbyLifestyle({ corridors }: { corridors: CorridorReach[] }) {
 
             {/* Distance, then what the distance is to. The number leads because
                 it is the thing being compared. */}
-            <dl className="grid grid-cols-2 gap-x-8 gap-y-7 sm:grid-cols-3">
+            {/*
+              `minmax(0,1fr)` rather than a bare `grid-cols-2`.
+
+              A grid track defaults to `min-width: auto`, so it refuses to go
+              narrower than its content — and the place name below carried a
+              `max-w-[22ch]`, about 143px at this size. Two of those plus the
+              32px gutter needed 318px inside a 280px column, so at 320px the
+              whole homepage panned sideways. Flooring the tracks at zero lets
+              the name truncate as it was always meant to, and the gutter
+              tightens on the narrowest screens.
+            */}
+            <dl className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-5 gap-y-7 sm:grid-cols-[repeat(3,minmax(0,1fr))] sm:gap-x-8">
               {current.nearest.map((n) => {
                 const Icon = ICONS[n.category] ?? Building2;
                 return (
-                  <div key={n.category}>
+                  <div key={n.category} className="min-w-0">
                     <dt className="flex items-center gap-2">
                       <Icon size={14} strokeWidth={1.75} className="text-[var(--data-brass)]" />
                       <span className="eyebrow">{n.label}</span>
@@ -146,12 +157,12 @@ export function NearbyLifestyle({ corridors }: { corridors: CorridorReach[] }) {
                     <dd className="mt-2">
                       <button
                         onClick={() => showCategory(n.category)}
-                        className="group text-left"
+                        className="group block w-full min-w-0 text-left"
                       >
                         <span className="tnum block text-[24px] font-medium leading-none text-ink transition-colors group-hover:text-accent">
                           {formatDistance(n.km)}
                         </span>
-                        <span className="mt-1.5 block max-w-[22ch] truncate text-[13px] text-muted">
+                        <span className="mt-1.5 block max-w-full truncate text-[13px] text-muted sm:max-w-[22ch]">
                           {n.name}
                         </span>
                       </button>

@@ -85,7 +85,7 @@ export function FilterBar() {
 
         <button
           onClick={() => setFiltersOpen(true)}
-          className={`ml-auto inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium transition-colors ${
+          className={`ml-auto inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium transition-colors sm:h-8 sm:px-3 ${
             count > 0
               ? "border-[var(--accent-line)] bg-[var(--accent-wash)] text-accent"
               : "border-line bg-raised text-muted hover:text-ink"
@@ -140,7 +140,7 @@ export function FilterBar() {
                 <h2 className="display text-[24px] text-ink">Refine</h2>
                 <button
                   onClick={() => setFiltersOpen(false)}
-                  className="grid h-8 w-8 place-items-center rounded-[var(--r-sm)] text-faint hover:bg-sunk hover:text-ink"
+                  className="grid h-10 w-10 place-items-center rounded-[var(--r-sm)] text-faint hover:bg-sunk hover:text-ink sm:h-8 sm:w-8"
                   aria-label="Close filters"
                 >
                   <X size={16} strokeWidth={1.75} />

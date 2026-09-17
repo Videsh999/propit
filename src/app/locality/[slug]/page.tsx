@@ -150,7 +150,7 @@ export default async function LocalityPage({ params }: { params: Promise<{ slug:
             {topProjects.length > 0 && (
               <>
                 <h2 className="display mt-14 text-[28px] text-ink">Projects in {locality.name}</h2>
-                <div className="mt-6 grid gap-x-5 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-x-5 gap-y-9 sm:grid-cols-[repeat(2,minmax(0,1fr))] lg:grid-cols-[repeat(3,minmax(0,1fr))]">
                   {topProjects.map((p) => (
                     <ProjectCard
                       key={p.id}
@@ -166,7 +166,18 @@ export default async function LocalityPage({ params }: { params: Promise<{ slug:
             {featured.length > 0 && (
               <>
                 <h2 className="display mt-14 text-[28px] text-ink">Homes for sale here</h2>
-                <div className="mt-6 grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+                {/*
+                  Every track floored at zero, not left on `auto`.
+
+                  The cards carry a `truncate` title, and `truncate` sets
+                  `white-space: nowrap` — so the title's *min-content* width is
+                  the whole untruncated string. An `auto` track will not shrink
+                  below that, so a single column computed to 330px inside a
+                  280px container and pushed the page sideways at 320px. With
+                  `minmax(0,1fr)` the track can shrink and the ellipsis does the
+                  job it was added for.
+                */}
+                <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-x-5 gap-y-8 sm:grid-cols-[repeat(2,minmax(0,1fr))] lg:grid-cols-[repeat(3,minmax(0,1fr))]">
                   {featured.map((p) => (
                     <Link key={p.id} href={`/property/${p.slug}`} className="group block">
                       <Img

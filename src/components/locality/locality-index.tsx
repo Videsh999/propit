@@ -164,60 +164,76 @@ function CorridorTable({
   }
 
   return (
-    <table className="w-full border-collapse text-left">
-      <thead>
-        <tr className="border-b border-line">
-          <th className="eyebrow py-2.5 font-medium">Locality</th>
-          <th className="eyebrow py-2.5 text-right font-medium">₹ / sq.ft</th>
-          <th className="eyebrow hidden py-2.5 text-right font-medium sm:table-cell">1 yr</th>
-          <th className="eyebrow py-2.5 text-right font-medium">Homes</th>
-          <th className="eyebrow hidden py-2.5 text-right font-medium md:table-cell">Projects</th>
-        </tr>
-      </thead>
-      <tbody>
-        {localities.map((l) => (
-          <tr
-            key={l.id}
-            onMouseEnter={() => flyTo(l.center, 12.4)}
-            className="group border-b border-line transition-colors duration-[160ms] hover:bg-sunk"
-          >
-            <td className="py-4 pr-4">
-              <button onClick={() => open(l)} className="block max-w-[46ch] text-left">
-                <span className="display flex items-center gap-2 text-[20px] leading-tight text-ink transition-colors group-hover:text-accent md:text-[24px]">
-                  {l.name}
-                  {highlighted.has(l.slug) && (
-                    <span className="eyebrow rounded-full border border-[var(--accent-line)] px-2 py-0.5 text-[9px] text-accent">
-                      Featured
-                    </span>
-                  )}
-                </span>
-                <span className="mt-1 block truncate text-[13px] text-muted">{l.character}</span>
-              </button>
-            </td>
-            <td className="tnum py-4 text-right text-[15px] text-ink">
-              {formatPriceSqft(l.avgPriceSqft)}
-            </td>
-            <td className="tnum hidden py-4 text-right text-[15px] sm:table-cell">
-              <span className={l.momentumPct >= 0 ? "text-accent" : "text-[var(--data-clay)]"}>
-                <TrendingUp
-                  size={11}
-                  strokeWidth={2}
-                  className="mr-1 inline-block align-[-1px]"
-                  aria-hidden
-                />
-                {l.momentumPct >= 0 ? "+" : ""}
-                {l.momentumPct}%
-              </span>
-            </td>
-            <td className="tnum py-4 text-right text-[15px] text-muted">
-              {formatCount(l.inventoryCount)}
-            </td>
-            <td className="tnum hidden py-4 text-right text-[15px] text-muted md:table-cell">
-              {l.projectCount}
-            </td>
+    /*
+      The table scrolls inside its own box, never the page.
+
+      At 375px this ran to 608px and took the whole document with it, so every
+      section on the page panned sideways — the one mobile failure that makes a
+      site feel broken rather than cramped. The column hiding below was already
+      in place and was not enough: an auto-layout table sizes to its content,
+      and the locality cell's `max-w-[46ch]` is about 460px at this font size,
+      so it inflated the table on its own.
+
+      Both halves are fixed here — the cell is capped far tighter on small
+      screens, and this wrapper is the floor that guarantees the page itself
+      never moves. It is the same pattern the compare table uses.
+    */
+    <div className="scroll-quiet -mx-5 overflow-x-auto px-5 md:mx-0 md:px-0">
+      <table className="w-full border-collapse text-left">
+        <thead>
+          <tr className="border-b border-line">
+            <th className="eyebrow py-2.5 font-medium">Locality</th>
+            <th className="eyebrow py-2.5 text-right font-medium">₹ / sq.ft</th>
+            <th className="eyebrow hidden py-2.5 text-right font-medium sm:table-cell">1 yr</th>
+            <th className="eyebrow py-2.5 text-right font-medium">Homes</th>
+            <th className="eyebrow hidden py-2.5 text-right font-medium md:table-cell">Projects</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {localities.map((l) => (
+            <tr
+              key={l.id}
+              onMouseEnter={() => flyTo(l.center, 12.4)}
+              className="group border-b border-line transition-colors duration-[160ms] hover:bg-sunk"
+            >
+              <td className="py-4 pr-4">
+                <button onClick={() => open(l)} className="block max-w-[24ch] text-left sm:max-w-[46ch]">
+                  <span className="display flex items-center gap-2 text-[20px] leading-tight text-ink transition-colors group-hover:text-accent md:text-[24px]">
+                    {l.name}
+                    {highlighted.has(l.slug) && (
+                      <span className="eyebrow rounded-full border border-[var(--accent-line)] px-2 py-0.5 text-[9px] text-accent">
+                        Featured
+                      </span>
+                    )}
+                  </span>
+                  <span className="mt-1 block truncate text-[13px] text-muted">{l.character}</span>
+                </button>
+              </td>
+              <td className="tnum py-4 text-right text-[15px] text-ink">
+                {formatPriceSqft(l.avgPriceSqft)}
+              </td>
+              <td className="tnum hidden py-4 text-right text-[15px] sm:table-cell">
+                <span className={l.momentumPct >= 0 ? "text-accent" : "text-[var(--data-clay)]"}>
+                  <TrendingUp
+                    size={11}
+                    strokeWidth={2}
+                    className="mr-1 inline-block align-[-1px]"
+                    aria-hidden
+                  />
+                  {l.momentumPct >= 0 ? "+" : ""}
+                  {l.momentumPct}%
+                </span>
+              </td>
+              <td className="tnum py-4 text-right text-[15px] text-muted">
+                {formatCount(l.inventoryCount)}
+              </td>
+              <td className="tnum hidden py-4 text-right text-[15px] text-muted md:table-cell">
+                {l.projectCount}
+              </td>
+            </tr>
+          ))}
+          </tbody>
+      </table>
+    </div>
   );
 }

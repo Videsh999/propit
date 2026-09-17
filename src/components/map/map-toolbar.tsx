@@ -113,7 +113,7 @@ export function MapToolbar({ localities }: { localities: LocalityLite[] }) {
               exit={{ opacity: 0, width: 0 }}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               onClick={commitBounds}
-              className="inline-flex h-8 shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full bg-accent px-3 text-[13px] font-medium text-[var(--accent-ink)]"
+              className="inline-flex h-10 shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full bg-accent px-3.5 text-[13px] font-medium text-[var(--accent-ink)] sm:h-8 sm:px-3"
             >
               <RefreshCw size={13} strokeWidth={2} />
               Search this area
@@ -432,7 +432,7 @@ function Tool({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors duration-[160ms]",
+        "inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium transition-colors duration-[160ms] sm:h-8 sm:px-3",
         active
           ? "bg-accent text-[var(--accent-ink)]"
           : "text-muted hover:bg-sunk hover:text-ink",
