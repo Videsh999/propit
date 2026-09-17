@@ -1,26 +1,51 @@
 {
-  "name": "realestatepropit",
+  "name": "propit",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "smoke": "node scripts/smoke.mjs",
+    "typecheck": "bash scripts/clean-sync-dupes.sh && tsc --noEmit",
+    "check:map": "tsx scripts/check-map-legibility.ts",
+    "preview:map": "node scripts/render-basemap-preview.mjs",
+    "clean:dupes": "bash scripts/clean-sync-dupes.sh",
+    "sync:maplibre": "node scripts/sync-maplibre-worker.mjs",
+    "predev": "node scripts/sync-maplibre-worker.mjs",
+    "prebuild": "node scripts/sync-maplibre-worker.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "@tanstack/react-query": "^5.102.8",
+    "@turf/turf": "^7.4.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.40.0",
+    "maplibre-gl": "^6.7.0",
+    "motion": "^13.2.0",
     "next": "16.3.4",
+    "nuqs": "^2.10.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "react-map-gl": "^8.1.3",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.5.4",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@mapbox/vector-tile": "^3.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "pbf": "^5.1.2",
+    "server-only": "^0.0.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
-  }
+  },
+  "description": "Map-first property discovery for Hyderabad."
 }

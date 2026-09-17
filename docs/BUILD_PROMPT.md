@@ -1,4 +1,4 @@
-# NIVASA — Master Build Prompt
+# PropIT — Master Build Prompt
 
 > **How to use this:** Paste this whole document into Claude Code as your first message in an empty
 > project directory. It is **phase-gated on purpose** — Claude should build Phase 0→3, stop, run the
@@ -10,7 +10,7 @@
 ## 0. WHO YOU ARE, WHAT WE'RE BUILDING
 
 You are acting as product designer, design engineer, geospatial engineer and AI product architect on
-a single team. You are building **Nivasa** (Sanskrit *निवास* — dwelling, abode, the place one belongs)
+a single team. You are building **PropIT** (Sanskrit *निवास* — dwelling, abode, the place one belongs)
 — a map-first real-estate discovery platform. Launch geography: **Hyderabad, India**. Architecture
 must be city-agnostic from day one.
 
@@ -19,7 +19,7 @@ render must be wired to real state and real queries, or must not exist yet.
 
 ### The one-sentence product
 
-> Most portals make you filter a list. Nivasa asks you where your life already is — your office, your
+> Most portals make you filter a list. PropIT asks you where your life already is — your office, your
 > child's school, your parents — and shows you the places you could live that hold all of it together.
 
 ### The signature feature (build the product around this, not around listings)
@@ -33,12 +33,12 @@ render must be wired to real state and real queries, or must not exist yet.
    Budget      ₹1.4 – 2.2 Cr   ·   3 BHK   ·   Apartment or Villa
 ```
 
-Nivasa computes the geographic region that satisfies all of them, paints it on the map as a soft
+PropIT computes the geographic region that satisfies all of them, paints it on the map as a soft
 **Livable Zone**, and ranks the properties inside it by a transparent **Fit Score**. The user then
 drags a radius, moves an anchor, or tells the assistant *"prioritise the office over the school"* —
 and the zone recomputes live.
 
-If nothing satisfies every constraint, Nivasa **never** shows an empty state. It relaxes the weakest
+If nothing satisfies every constraint, PropIT **never** shows an empty state. It relaxes the weakest
 constraint and says exactly what it did:
 
 > No home matches all four. Stretching the school from 5 km to 7 km opens up **41 homes** in Nallagandla
@@ -137,7 +137,7 @@ Dark mode: redefine tokens only. `--paper: #14130F`, `--ink: #F2EFE8`, warm not 
 ### Type
 
 - Display / headlines: **Fraunces** (variable, `opsz` axis, `wght` 300–500, slight optical size at
-  large sizes). Serif. This alone separates Nivasa from every blue-sans portal.
+  large sizes). Serif. This alone separates PropIT from every blue-sans portal.
 - UI / body / data: **Inter** with `font-feature-settings: "ss03","cv05","tnum"`. Tabular numerals on
   every price — non-negotiable, prices must not jitter.
 - Scale: 12 / 13 / 15 / 17 / 21 / 28 / 40 / 56 / 76. Tight tracking on display (`-0.03em`), normal on body.
@@ -169,16 +169,16 @@ Lucide, 1.5px stroke, 18px default. Never mix icon families.
 
 Default basemap: Carto **Positron** vector style
 (`https://basemaps.cartocdn.com/gl/positron-gl-style/style.json`) — keyless, works immediately.
-Then **restyle it in code** at runtime so it belongs to Nivasa rather than looking like a default:
+Then **restyle it in code** at runtime so it belongs to PropIT rather than looking like a default:
 
 - desaturate landuse toward `--paper-sunk`
 - water → a single muted slate, no blue saturation
 - roads → hairline `--line`, motorways one step darker, no colour coding
 - labels → Inter, `--ink-muted`, drop POI labels below zoom 14 entirely
-- kill every stock POI icon; Nivasa draws its own POI layer
+- kill every stock POI icon; PropIT draws its own POI layer
 
-Ship this as `src/lib/map/nivasaStyle.ts` — a function that takes the base style JSON and returns the
-Nivasa-tuned style. Include a dark variant.
+Ship this as `src/lib/map/propitStyle.ts` — a function that takes the base style JSON and returns the
+PropIT-tuned style. Include a dark variant.
 
 ### Layers (all GeoJSON sources, all WebGL — no DOM markers except the selected one)
 
@@ -325,8 +325,8 @@ per render destroys the premium feel instantly.
 
 ### 7.1 Navigation
 
-`Nivasa` wordmark (Fraunces, letterspaced) · Buy · Rent · Projects · Sell · Localities · About ·
-`⌘K` search affordance · **Ask Nivasa** · avatar.
+`PropIT` wordmark (Fraunces, letterspaced) · Buy · Rent · Projects · Sell · Localities · About ·
+`⌘K` search affordance · **Ask PropIT** · avatar.
 
 At scroll > 80px: height 72→56px, `backdrop-filter: blur(20px) saturate(1.4)`, background
 `color-mix(in srgb, var(--paper) 82%, transparent)`, hairline bottom border fades in. One blurred
@@ -343,7 +343,7 @@ Full-bleed, `height: calc(100svh - 72px)`, `max-height: 880px`. Never taller tha
 
 ```
       Find where your life fits.
-      Tell Nivasa the places that matter. It will find the homes between them.
+      Tell PropIT the places that matter. It will find the homes between them.
 
       [ Search a locality, project, or just describe what you want…        ⌘K ]
 
@@ -427,14 +427,14 @@ badge, three actions: `View` `Compare` `Save`.
 **Detail** `/property/[slug]`: cinematic gallery (scroll-driven, not a carousel with dots) → sticky
 price rail with EMI calculator → specs → floor plans → amenities → **What's Nearby** with a live map →
 commute-from-your-anchors block → developer → RERA block → price history → similar homes. CTAs:
-`Schedule visit` `Request callback` `Ask Nivasa about this home`.
+`Schedule visit` `Request callback` `Ask PropIT about this home`.
 
 ### 7.7 Home page below the hero
 
 Featured Projects (editorial, large imagery, 3-up) → Popular Localities (map-thumbnail cards with live
 counts) → **Explore by Lifestyle** (*Near your office · Great schools nearby · Metro-connected ·
 Investment momentum · Quiet & green*) → Featured Homes → Locality Intelligence teaser → New Launches →
-**Meet Nivasa** (the assistant, shown doing something real) → Developers → footer.
+**Meet PropIT** (the assistant, shown doing something real) → Developers → footer.
 
 128px rhythm. Alternate full-bleed and contained. Not nine identical card grids.
 
@@ -447,7 +447,7 @@ AI history), `/compare` (side-by-side + AI summary), `/about`.
 ### 7.9 Mobile
 
 Map fills the screen. Results in a bottom sheet with three detents (12% / 55% / 92%), spring physics,
-real drag. Search, Filters, Anchors and Ask Nivasa as a floating pill row. Anchors panel becomes a
+real drag. Search, Filters, Anchors and Ask PropIT as a floating pill row. Anchors panel becomes a
 full-height sheet. This is a redesign, not a reflow.
 
 ---
@@ -463,7 +463,7 @@ Localities   Kokapet · Kondapur · Kukatpally
 Projects     My Home Apas · Rajapushpa Provincia
 Developers   My Home Constructions
 Nearby       Kokapet Junction · Kokapet Lake
-Ask Nivasa   "3 BHK under 2 Cr near Hitech City"     ← always the last row
+Ask PropIT   "3 BHK under 2 Cr near Hitech City"     ← always the last row
 ```
 
 ### 8.2 Intent routing
@@ -515,7 +515,7 @@ Target dialogue:
 
 > **You:** My office is in the Financial District and my son goes to Oakridge Gachibowli. 3 BHK under 2 crore.
 >
-> **Nivasa:** Placed both. Within 20 minutes of your office and 5 km of the school, there are **41 homes**
+> **PropIT:** Placed both. Within 20 minutes of your office and 5 km of the school, there are **41 homes**
 > in your range — mostly Nallagandla, Tellapur and Kollur. Nallagandla is the strongest compromise:
 > ₹7,400/sq.ft, 14 homes, and both trips stay under 15 minutes.
 > *Travel times are estimated from distance until routing is connected.*
@@ -578,7 +578,7 @@ fix every console and TypeScript error, then report to me with screenshots and w
 |---|---|---|
 | **0** | Scaffold, docker-compose Postgres+PostGIS, Drizzle schema, migrations, seed script, `.env.example` | `npm run seed` loads 900 properties; a raw radius query returns sane results |
 | **1** | Design system: tokens, type, Button/Input/Sheet/Panel/Card/Skeleton/Toast, nav, footer | A tokens page renders every component in light + dark |
-| **2** | Map engine: MapLibre, Nivasa style, clusters, price chips, bounds→query→results loop | Pan and zoom updates real results at 60fps |
+| **2** | Map engine: MapLibre, PropIT style, clusters, price chips, bounds→query→results loop | Pan and zoom updates real results at 60fps |
 | **3** | Hero + home page + `/search` split view, URL state, hover sync | The journey in §11 works up to "clicks a property" |
 | **4** | Filters (all of §7.3), live counts, server-side re-validation | Every filter changes the number and the map |
 | **5** | Radius, draw (circle/polygon/rect), "search this area", layers | Drawing returns only properties inside the shape |
@@ -603,7 +603,7 @@ This is the acceptance test. Write it as a Playwright spec.
 7. Set budget to ₹1.4–1.8 Cr. Zero results → **relaxation offer**, not an empty state. Apply it.
 8. Click a price chip. Card animates from the marker. Fit score is shown and explains itself.
 9. Open the property. Gallery, specs, nearby, commute-from-your-anchors all real.
-10. Ask Nivasa *"is this good for a family?"* — grounded answer citing schools, parks and hospitals
+10. Ask PropIT *"is this good for a family?"* — grounded answer citing schools, parks and hospitals
     that actually exist in `pois`.
 11. *"Show me cheaper options nearby."* Map updates. Filters visibly change.
 12. Compare three. AI summary that invents nothing.
