@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { SITE_URL } from "@/lib/site-url";
 import { Providers } from "@/components/providers";
 import { Navbar } from "@/components/nav/navbar";
 import { Footer } from "@/components/nav/footer";
@@ -27,7 +28,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: SITE_URL,
   title: {
     default: "PropIT — Find where your life fits",
     template: "%s · PropIT",
