@@ -42,6 +42,10 @@ export function PropertyRail() {
   const [auto, setAuto] = useState(true);
   const [inView, setInView] = useState(true);
   const [isTabVisible, setIsTabVisible] = useState(true);
+  // Someone who has asked their system for reduced motion must not be given a
+  // carousel that moves on its own. The manual controls still work; only the
+  // unattended advance is withheld.
+  const reduce = usePrefersReducedMotion();
   const isInteractingRef = useRef(false);
 
   // Ref for the current active index to avoid stale closures in timers
@@ -58,7 +62,10 @@ export function PropertyRail() {
   const toggleArrayFilter = useDiscovery((s) => s.toggleArrayFilter);
 
   const { data, isLoading } = useProperties({ limit: 12 });
-  const items = data?.items ?? [];
+  // `data?.items ?? []` is a fresh array literal on every render, which made
+  // the memo below it recompute every time and re-issue a new list to every
+  // consumer. Anchoring the fallback keeps the identity stable between queries.
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
 
   // Triple set for seamless infinite looping without rewinds
   const repeatedItems = useMemo(() => {
@@ -231,16 +238,19 @@ export function PropertyRail() {
 
   /**
    * Automatic scrolling: advances smoothly to the next property in a loop.
+   *
+   * `reduce` is first for a reason — it is the one condition no amount of
+   * interaction should be able to switch back on.
    */
   useEffect(() => {
-    if (!auto || !inView || !isTabVisible || items.length < 2) return;
+    if (reduce || !auto || !inView || !isTabVisible || items.length < 2) return;
     const id = window.setInterval(() => {
       if (!isInteractingRef.current) {
         navigate("next");
       }
     }, DWELL_MS);
     return () => window.clearInterval(id);
-  }, [auto, inView, isTabVisible, items.length, navigate, timerKey]);
+  }, [reduce, auto, inView, isTabVisible, items.length, navigate, timerKey]);
 
   /** Manual navigation handlers */
   const handleManualNav = useCallback(
