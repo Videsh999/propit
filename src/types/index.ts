@@ -143,6 +143,8 @@ export interface Property {
 
   carpetAreaSqft: number;
   builtupAreaSqft: number;
+  superBuiltupAreaSqft?: number | null;
+  floorPlanUrl?: string | null;
   bedrooms: number;
   bathrooms: number;
   balconies: number;

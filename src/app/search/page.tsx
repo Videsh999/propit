@@ -27,6 +27,7 @@ export default function SearchPage() {
     id: p.id,
     slug: p.slug,
     name: p.name,
+    localityId: p.localityId,
     lat: p.location.lat,
     lng: p.location.lng,
     priceMin: p.priceMin,

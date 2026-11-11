@@ -41,13 +41,17 @@ interface Done {
  * someone is on their way when no one is would be the worst kind of lie this
  * product could tell.
  */
-export function ScheduleVisit({ heroImage }: { heroImage: string }) {
+export function ScheduleVisit({ heroImage, propertySlug, initialMode = "site" }: {
+  heroImage?: string;
+  propertySlug?: string;
+  initialMode?: (typeof MODES)[number]["value"];
+}) {
   const [busy, setBusy] = useState(false);
   const [fields, setFields] = useState<Fields>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [done, setDone] = useState<Done | null>(null);
 
-  const [mode, setMode] = useState<(typeof MODES)[number]["value"]>("site");
+  const [mode, setMode] = useState<(typeof MODES)[number]["value"]>(initialMode);
   const [slot, setSlot] = useState<(typeof SLOTS)[number]["value"]>("morning");
 
   const today = new Date().toISOString().slice(0, 10);
@@ -72,6 +76,7 @@ export function ScheduleVisit({ heroImage }: { heroImage: string }) {
           date: data.get("date"),
           mode,
           slot,
+          propertySlug,
         }),
       });
       const json = await res.json();
@@ -89,10 +94,10 @@ export function ScheduleVisit({ heroImage }: { heroImage: string }) {
   }
 
   return (
-    <section className="border-t border-line bg-sunk px-5 py-20 md:px-8 md:py-24">
-      <div className="mx-auto grid max-w-[1440px] items-stretch gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16">
+    <section className={propertySlug ? "mt-4 border-t border-line pt-4" : "border-t border-line bg-sunk px-5 py-20 md:px-8 md:py-24"}>
+      <div className={propertySlug ? undefined : "mx-auto grid max-w-[1440px] items-stretch gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16"}>
         {/* The place you'd be standing in */}
-        <Reveal>
+        {heroImage && <Reveal>
           {/* On a phone the photograph is context, not the subject — a banner
               above the form rather than half the screen before it. */}
           <div className="relative h-[200px] overflow-hidden rounded-[var(--r-lg)] border border-line sm:h-[260px] lg:h-full lg:min-h-[340px]">
@@ -110,13 +115,13 @@ export function ScheduleVisit({ heroImage }: { heroImage: string }) {
               </p>
             </div>
           </div>
-        </Reveal>
+        </Reveal>}
 
         <Reveal delay={0.06}>
           <div className="flex h-full flex-col justify-center">
-            <p className="eyebrow mb-3">Schedule a viewing</p>
+            {!propertySlug && <p className="eyebrow mb-3">Schedule a viewing</p>}
             <h2 className="display text-[32px] leading-[1.05] text-ink md:text-[42px]">
-              See it for yourself.
+              {propertySlug ? "Request a viewing or callback" : "See it for yourself."}
             </h2>
 
             {done ? (
@@ -167,7 +172,7 @@ export function ScheduleVisit({ heroImage }: { heroImage: string }) {
                     onChange={setMode}
                   />
 
-                  <div className="grid gap-4 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)]">
+                  <div className={cn("grid gap-4", !propertySlug && "sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)]")}>
                     <Field label="Date" name="date" error={fields.date}>
                       <input
                         name="date"

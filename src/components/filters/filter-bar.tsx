@@ -39,7 +39,7 @@ const BHK_INLINE = [1, 2, 3, 4, 5];
 const BUY_STOPS = [0, 5e6, 1e7, 1.5e7, 2e7, 3e7, 4e7, 6e7, 1e8];
 const RENT_STOPS = [0, 15000, 25000, 40000, 60000, 100000, 200000, 500000];
 
-export function FilterBar() {
+export function FilterBar({ hideInline = false }: { hideInline?: boolean } = {}) {
   const { filters, setFilters, toggleArrayFilter, resetFilters, filtersOpen, setFiltersOpen } =
     useDiscovery();
   const count = activeFilterCount(filters);
@@ -66,7 +66,7 @@ export function FilterBar() {
         The chip strip keeps `overflow-x-auto` and its fade as a floor, for
         widths narrower than any breakpoint here anticipates.
       */}
-      <div className="flex flex-wrap items-center gap-2">
+      {!hideInline && <div className="flex flex-wrap items-center gap-2">
         <div className="flex shrink-0 items-center rounded-full border border-line bg-raised p-0.5">
           {(["buy", "rent"] as const).map((t) => (
             <button
@@ -115,7 +115,7 @@ export function FilterBar() {
           />
         </div>
 
-      </div>
+      </div>}
 
       <AnimatePresence>
         {filtersOpen && (

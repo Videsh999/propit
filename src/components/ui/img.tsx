@@ -90,6 +90,7 @@ export function Img({
         alt={alt}
         sizes={sizes ?? "100vw"}
         loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : undefined}
         decoding="async"
         onLoad={() => setState("ok")}
         onError={() => setState("error")}

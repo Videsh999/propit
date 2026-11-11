@@ -1,0 +1,169 @@
+.page {
+  background: radial-gradient(ellipse at 50% 300px, var(--paper-raised), transparent 60%), var(--paper);
+  color: var(--ink);
+  padding: 0 clamp(16px, 3.5vw, 58px) 56px;
+}
+.hero {
+  position: relative;
+  max-width: 1500px;
+  min-height: 380px;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  border-radius: var(--r-canvas);
+  color: #fffdf3;
+  background: linear-gradient(90deg, #0b1710aa, #0b17100d 73%), #1a3025 url("/brand/hyderabad-residences.webp") 58% center / cover no-repeat;
+}
+.heroContent { padding: 34px clamp(24px, 5.5vw, 94px) 75px; }
+.location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e5ecdf;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+.hero h1 {
+  margin: 20px 0 16px;
+  font-family: var(--font-editorial);
+  font-size: clamp(54px, 5.5vw, 82px);
+  font-weight: 400;
+  line-height: .94;
+  letter-spacing: -.065em;
+}
+.hero h1 em { color: #f1d4a4; font-weight: 400; }
+.hero p { max-width: 370px; color: #e6ebe1; font-size: 15px; line-height: 1.6; }
+.artCredit { position: absolute; right: 18px; bottom: 50px; color: white; font-size: 10px; text-shadow: 0 1px 3px black; }
+.explore { max-width: 1350px; margin: auto;  }
+.searchPanel {
+  position: relative;
+  z-index: 35;
+  margin: -44px clamp(10px, 3vw, 50px) 0;
+  padding: 0 18px 15px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper-raised);
+  box-shadow: var(--e2);
+}
+.listingTabs { display: flex; align-items: center; gap: 22px; min-height: 44px; }
+.listingTabs > * { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.listingTabs button { min-height: 44px; border-bottom: 2px solid transparent; }
+.listingTabs button[aria-pressed="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.searchRow { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(136px, .31fr) minmax(115px, .23fr) auto; gap: 9px; }
+.searchInput > div:first-child { border-radius: 8px; background: var(--paper); box-shadow: none; }
+.selectWrap { position: relative; min-width: 0; }
+.selectWrap select, .filterButton {
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--paper-raised);
+  font-size: 13px;
+  font-weight: 500;
+}
+.selectWrap select { appearance: none; padding: 0 29px 0 11px; }
+.selectWrap > svg { position: absolute; top: 15px; right: 10px; pointer-events: none; }
+.filterButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; padding: 0 13px; }
+.filterCount { background: var(--accent-wash); border-radius: 50%; min-width: 18px; }
+.sectionHeader { display: flex; justify-content: space-between; align-items: end; gap: 14px; padding-top: 37px; }
+.sectionHeader h2 { font-family: var(--font-editorial); font-size: clamp(36px, 4vw, 52px); line-height: 1.05; letter-spacing: -.05em; }
+.sectionHeader p { margin-top: 7px; color: var(--muted); font-size: 14px; }
+.textLink { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; color: var(--accent); font-size: 13px; font-weight: 600; }
+.textLink { min-height: 36px; }
+.textLink:hover, .card:hover .cardTitle { text-decoration: underline; text-underline-offset: 3px; }
+.localities { display: flex; flex-wrap: wrap; gap: 8px; margin: 19px 0 16px; }
+.localities button { min-height: 35px; border: 1px solid var(--line); border-radius: 999px; padding: 0 13px; background: var(--paper-raised); color: var(--muted); font-size: 12px; font-weight: 550; }
+.localities button[aria-pressed="true"] { background: var(--accent-wash); border-color: var(--accent-line); color: var(--accent); }
+.workspace { display: grid; grid-template-columns: minmax(345px, 39fr) minmax(0, 61fr); gap: 14px; }
+.results { display: flex; min-width: 0; flex-direction: column; gap: 9px; }
+.resultHeader { min-height: 27px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 650; }
+.resultHeader span { color: var(--muted); font-size: 11px; font-weight: 500; }
+.card { position: relative; display: grid; grid-template-columns: minmax(90px, 30%) minmax(0, 1fr); min-height: 123px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-raised); overflow: hidden; }
+.cardImage { height: 100%; }
+.cardBody { min-width: 0; padding: 11px 36px 9px 12px; }
+.cardBody strong { display: block; font-size: 18px; letter-spacing: -.035em; }
+.cardTitle { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 600; }
+.cardBody p { display: flex; align-items: center; gap: 5px; white-space: nowrap; color: var(--muted); font-size: 11px; }
+.cardBody p { margin-top: 4px; }
+.cardBody .address { display: block; overflow: hidden; text-overflow: ellipsis; }
+.cardArrow { position: absolute; top: 14px; right: 12px; color: var(--accent); }
+.empty { padding: 24px 0; color: var(--muted); font-size: 14px; }
+.empty button { color: var(--accent); text-decoration: underline; }
+.map > :first-child { position: absolute; inset: 0; }
+.map { position: relative; isolation: isolate; min-height: 440px; overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: var(--paper-sunk); scroll-margin-top: 84px; }
+.mapAnchor { position: absolute; bottom: 26px; right: 12px; z-index: 20; display: flex; align-items: center; gap: 6px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper-raised); color: var(--accent); font-size: 12px; font-weight: 600; }
+@media (max-width: 850px) {
+  .searchRow { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; }
+  .searchInput { grid-column: 1 / -1; }
+  .searchPanel { margin-inline: 13px; }
+  .artCredit { bottom: 48px; }
+}
+@media (max-width: 690px) {
+  .hero { min-height: 310px; background-position: 52% center; background-image: linear-gradient(90deg, #0b1710c9, #0b171052), url("/brand/hyderabad-residences.webp"); }
+  .heroContent { padding-bottom: 68px; }
+  .hero h1 { font-size: clamp(48px, 11vw, 64px); }
+  .sectionHeader { flex-wrap: wrap; }
+  .workspace { grid-template-columns: minmax(0, 1fr); }
+  .map { height: 370px; min-height: 0; }
+}
+
+.catalogue .sectionHeader { margin-bottom: 16px; }
+.catalogue h2 { font-size: clamp(30px, 3.6vw, 47px); }
+.localityRail, .projectRail {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 13px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 3px 3px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #b9c7bb transparent;
+}
+.localityRail { grid-auto-columns: clamp(188px, 18vw, 244px); }
+.projectRail { grid-auto-columns: minmax(235px, 1fr); }
+.localityRail li, .projectRail li { min-width: 0; scroll-snap-align: start; }
+.localityCard, .projectCard { position: relative; display: block; overflow: hidden; border-radius: 14px; }
+.localityCard { height: clamp(214px, 22vw, 300px); color: #fff; background: #263e32; }
+.tileImage, .localityCard::after { position: absolute; inset: 0; }
+.localityCard::after { content: ""; background: linear-gradient(180deg, #0a171534 0%, transparent 35%, #081811ee 100%); }
+.localityInfo { position: absolute; z-index: 1; right: 12px; bottom: 15px; left: 14px; }
+.localityInfo h3 { font: 400 clamp(23px, 2vw, 30px)/1.08 Georgia, serif; letter-spacing: -.045em; }
+.localityInfo p { margin-top: 7px; font-size: 12px; font-weight: 600; }
+.localityInfo span { font-weight: 400; color: #e5eee7; }
+.tileArrow { position: absolute; z-index: 1; top: 12px; right: 12px; box-sizing: content-box; border-radius: 50%; padding: 6px; background: #10251dbb; }
+.projectCard { border: 1px solid var(--line); background: var(--paper-raised); }
+.projectImage { aspect-ratio: 16 / 10; }
+.projectInfo { padding: 14px; }
+.projectInfo p { color: var(--muted); font-size: 12px; }
+.projectInfo h3 { margin: 5px 0 9px; font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
+.projectInfo div { display: flex; justify-content: space-between; gap: 8px; color: var(--accent); font-size: 13px; }
+.localityCard img, .projectCard img { transition: transform 240ms ease, opacity 350ms ease; }
+.localityCard:hover img, .projectCard:hover img { transform: scale(1.035); }
+.mapPlaceholder { display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+@media (max-width: 640px) {
+  .catalogue .sectionHeader { align-items: start; gap: 5px 14px; padding-top: 26px; }
+  .catalogue .textLink { min-height: 30px; }
+  .localityRail { grid-auto-columns: min(68vw, 235px); }
+  .projectRail { grid-auto-columns: min(75vw, 285px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .localityCard img, .projectCard img { transition: none; }
+}
+
+@media (max-width: 440px) {
+  .filterLabel { display: none; }
+  .filterButton { gap: 4px; padding-inline: 10px; }
+}
+
+.card, .projectCard, .localityCard {
+  transition: transform 180ms ease-out, box-shadow 180ms ease-out;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .card:hover, .projectCard:hover, .localityCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 18px #17271f18;
+  }
+}

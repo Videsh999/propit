@@ -20,6 +20,7 @@ import { formatCount } from "@/lib/format";
 import type { Locality, Poi } from "@/types";
 import { cn } from "@/lib/utils";
 import { BottomSheet, type Detent } from "@/components/ui/bottom-sheet";
+import { useSelectedProperty } from "@/lib/hooks/use-selected-property";
 import { useBoundsDrift } from "@/lib/hooks/use-bounds-drift";
 import { useIsMobile } from "@/lib/hooks/use-media-query";
 
@@ -41,15 +42,20 @@ export function DiscoveryView({
 }: {
   localities: LocalityLite[];
   pois: Poi[];
-  projects: { id: string; slug: string; name: string; lat: number; lng: number; priceMin: number }[];
+  projects: { id: string; slug: string; name: string; localityId: string; lat: number; lng: number; priceMin: number }[];
 }) {
   const {
-    setBounds, viewMode, anchors, filters,
+    setBounds, viewMode, anchors, filters, select,
     selectedLocalitySlug, previewProperty, saveSearch, savedSearches,
     radius, setRadius, sort, setSort, setFiltersOpen, setAnchorsOpen, setAssistantOpen,
   } = useDiscovery();
 
-  const { data, isLoading, isError, error, refetch } = useProperties({ limit: 40 });
+  const { data: queryData, isLoading: queryLoading, isPlaceholderData, isError, error, refetch } = useProperties({ limit: 40 });
+  const focusedLocality = filters.localitySlugs.length === 1
+    ? localities.find(({ slug }) => slug === filters.localitySlugs[0])
+    : undefined;
+  const data = focusedLocality && isPlaceholderData ? undefined : queryData;
+  const isLoading = queryLoading || Boolean(focusedLocality && isPlaceholderData);
   const { data: zone } = useZone();
   const [savedNote, setSavedNote] = useState(false);
   const [detent, setDetent] = useState<Detent>(1);
@@ -62,6 +68,7 @@ export function DiscoveryView({
   );
 
   const drifted = useBoundsDrift();
+  useSelectedProperty();
 
   // Scroll the list back to the top whenever the query changes materially.
   useEffect(() => {
@@ -85,6 +92,7 @@ export function DiscoveryView({
             <>
               <span className="tnum font-semibold text-ink">{formatCount(data?.total ?? 0)}</span>{" "}
               {data?.total === 1 ? "home" : "homes"}
+              {focusedLocality && <span> in {focusedLocality.name}</span>}
               {anchors.length > 0 && <span className="text-faint"> in your zone</span>}
             </>
           )}
@@ -166,11 +174,13 @@ export function DiscoveryView({
   const mapPane = (
     <>
       <PropitMap
+        key={focusedLocality?.slug ?? "hyderabad"}
+        localityScope={focusedLocality}
         points={data?.points ?? []}
         contextPoints={data?.contextPoints ?? []}
         localityCounts={data?.localityCounts ?? []}
-        projects={projects}
-        localities={localities}
+        projects={focusedLocality ? projects.filter((project) => localityById.get(project.localityId) === focusedLocality.name) : projects}
+        localities={focusedLocality ? [focusedLocality] : localities}
         pois={pois}
         zone={zone?.zone ?? null}
         onBoundsChange={setBounds}
@@ -180,7 +190,7 @@ export function DiscoveryView({
       <AnimatePresence>
         <AnchorsPanel />
       </AnimatePresence>
-      <AnimatePresence>{previewProperty && <PropertyPreview />}</AnimatePresence>
+      <AnimatePresence>{!isMobile && previewProperty && <PropertyPreview />}</AnimatePresence>
 
       {radius && (
         <div className="pointer-events-auto absolute bottom-3 right-3 z-20 flex items-center gap-2 rounded-full border border-line bg-[color-mix(in_srgb,var(--paper-raised)_90%,transparent)] px-3 py-1.5 text-[12px] shadow-[var(--e1)] backdrop-blur">
@@ -204,11 +214,21 @@ export function DiscoveryView({
       <div className="relative h-[calc(100svh-72px)] overflow-hidden">
         {mapPane}
 
-        <BottomSheet detent={detent} onDetentChange={setDetent} header={resultsHeader}>
+        <AnimatePresence>
+          {previewProperty && <PropertyPreview className="fixed bottom-[calc(12vh+12px)] z-[41] max-h-[calc(88vh-96px)]" />}
+        </AnimatePresence>
+        <BottomSheet
+          detent={previewProperty ? 0 : detent}
+          onDetentChange={(next) => {
+            if (next !== 0 && previewProperty) select(null);
+            setDetent(next);
+          }}
+          header={resultsHeader}
+        >
           {resultsList}
         </BottomSheet>
 
-        {detent === 0 && (
+        {detent === 0 && !previewProperty && (
           <div className="pointer-events-none absolute inset-x-0 bottom-[calc(12svh+12px)] z-30 flex justify-center gap-1.5 px-3">
             <SheetPill icon={SearchIcon} label={`${formatCount(data?.total ?? 0)} homes`} onClick={() => setDetent(1)} />
             <SheetPill icon={SlidersHorizontal} label="Filters" onClick={() => { setDetent(1); setFiltersOpen(true); }} />

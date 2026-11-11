@@ -47,6 +47,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
   return (
     <main>
       <PropertyDetail
+        key={property.id}
         property={property}
         locality={locality}
         project={project}

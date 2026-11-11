@@ -96,7 +96,7 @@ export function makePill(spec: PillSpec): {
  */
 export const PILL_SPECS: Record<string, PillSpec> = {
   "pill-idle": { fill: "#FFFFFF", border: "#C9C9CE", shadow: true },
-  "pill-hover": { fill: "#FFFFFF", border: "#0066CC", shadow: true },
-  "pill-selected": { fill: "#0066CC", border: "#0066CC", shadow: true },
+  "pill-hover": { fill: "#FFFFFF", border: "#285640", shadow: true },
+  "pill-selected": { fill: "#285640", border: "#285640", shadow: true },
   "pill-seen": { fill: "#E8E8ED", border: "#D2D2D7", shadow: false },
 };

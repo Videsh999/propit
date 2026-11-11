@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { Search, Sparkles, MapPin, Building2, Landmark, CornerDownLeft, Loader2 } from "lucide-react";
 import { useSuggest, type Suggestion } from "@/lib/hooks/use-suggest";
-import { useDiscovery } from "@/store/discovery";
+import { filtersToParams, useDiscovery } from "@/store/discovery";
 import { cn } from "@/lib/utils";
 import type { PropertyFilters } from "@/types";
 
@@ -44,7 +44,16 @@ export function SearchInput({
   const setUseBounds = useDiscovery((s) => s.setUseBounds);
   const flyTo = useDiscovery((s) => s.flyTo);
   const selectLocality = useDiscovery((s) => s.selectLocality);
-  const setAssistantOpen = useDiscovery((s) => s.setAssistantOpen);
+  function askAssistant(question: string) {
+    const store = useDiscovery.getState();
+    store.setAssistantDraft(question);
+    store.setAssistantOpen(true);
+  }
+
+  function openResults() {
+    const { filters, anchors, radius } = useDiscovery.getState();
+    router.push(`/search?${filtersToParams(filters, anchors, radius)}`);
+  }
 
   const parsed = data?.parsed ?? null;
 
@@ -77,7 +86,7 @@ export function SearchInput({
       const res = await fetch("/api/search/natural", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: q, context: {} }),
+        body: JSON.stringify({ query: q, context: { filters: useDiscovery.getState().filters } }),
       });
       if (!res.ok) throw new Error();
       const json = (await res.json()) as {
@@ -90,6 +99,12 @@ export function SearchInput({
         needsAssistant: boolean;
       };
 
+      if (json.needsAssistant) {
+        askAssistant(q);
+        onDone?.();
+        return;
+      }
+
       setUseBounds(false);
       setFilters(json.parsed.filters);
       if (json.parsed.target && json.parsed.radiusKm) {
@@ -99,16 +114,15 @@ export function SearchInput({
           label: json.parsed.target.name,
         });
         flyTo(json.parsed.target.location, 12.4);
-      } else if (json.parsed.target) {
+      } else {
         setRadius(null);
-        flyTo(json.parsed.target.location, 13);
+        if (json.parsed.target) flyTo(json.parsed.target.location, 13);
       }
-      if (json.needsAssistant) setAssistantOpen(true);
-      router.push("/search");
+      openResults();
       onDone?.();
     } catch {
       // Falls through to the assistant, which can always take the question.
-      setAssistantOpen(true);
+      askAssistant(q);
     } finally {
       setRunning(false);
       setOpen(false);
@@ -117,7 +131,13 @@ export function SearchInput({
 
   function pick(row: (typeof rows)[number]) {
     if (row.id === "__ask") {
-      void runNaturalSearch(value.trim());
+      if (parsed?.isQuestion) {
+        setOpen(false);
+        askAssistant(value.trim());
+        onDone?.();
+      } else {
+        void runNaturalSearch(value.trim());
+      }
       return;
     }
     const s = row as Suggestion;
@@ -126,16 +146,18 @@ export function SearchInput({
     if (s.group === "Localities" && s.slug) {
       setUseBounds(false);
       setFilters({ localitySlugs: [s.slug] });
+      setRadius(null);
       selectLocality(s.slug);
       if (s.location) flyTo(s.location, 13.2);
-      router.push("/search");
+      openResults();
     } else if (s.href) {
       router.push(s.href);
     } else if (s.location) {
       setUseBounds(false);
+      setFilters({ localitySlugs: [] });
       setRadius({ center: s.location, km: 3, label: s.label });
       flyTo(s.location, 13);
-      router.push("/search");
+      openResults();
     }
     onDone?.();
   }

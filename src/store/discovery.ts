@@ -60,6 +60,8 @@ interface DiscoveryState {
   hoveredPropertyId: string | null;
   selectedLocalitySlug: string | null;
   previewProperty: ScoredProperty | null;
+  viewedProperty: { id: string; slug: string; title: string } | null;
+  setViewedProperty: (property: DiscoveryState["viewedProperty"]) => void;
 
   compareIds: string[];
   savedIds: string[];
@@ -71,6 +73,7 @@ interface DiscoveryState {
   anchorsOpen: boolean;
   filtersOpen: boolean;
   assistantOpen: boolean;
+  assistantDraft: string | null;
   paletteOpen: boolean;
 
   command: MapCommand | null;
@@ -114,6 +117,7 @@ interface DiscoveryState {
   setAnchorsOpen: (v: boolean) => void;
   setFiltersOpen: (v: boolean) => void;
   setAssistantOpen: (v: boolean) => void;
+  setAssistantDraft: (draft: string | null) => void;
   setPaletteOpen: (v: boolean) => void;
   setSort: (s: DiscoveryState["sort"]) => void;
 
@@ -151,6 +155,8 @@ export const useDiscovery = create<DiscoveryState>()(
     hoveredPropertyId: null,
     selectedLocalitySlug: null,
     previewProperty: null,
+    viewedProperty: null,
+    setViewedProperty: (viewedProperty) => set({ viewedProperty }),
 
     compareIds: [],
     savedIds: [],
@@ -178,6 +184,7 @@ export const useDiscovery = create<DiscoveryState>()(
     anchorsOpen: false,
     filtersOpen: false,
     assistantOpen: false,
+    assistantDraft: null,
     paletteOpen: false,
 
     command: null,
@@ -292,6 +299,7 @@ export const useDiscovery = create<DiscoveryState>()(
     setAnchorsOpen: (anchorsOpen) => set({ anchorsOpen }),
     setFiltersOpen: (filtersOpen) => set({ filtersOpen }),
     setAssistantOpen: (assistantOpen) => set({ assistantOpen }),
+    setAssistantDraft: (assistantDraft) => set({ assistantDraft }),
     setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
     setSort: (sort) => set({ sort }),
 

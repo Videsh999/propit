@@ -1,24 +1,28 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { motion } from "motion/react";
+import dynamic from "next/dynamic";
+import { motion, useInView, useReducedMotion } from "motion/react";
 import {
-  BedDouble, Bath, Car, Compass, Building2, Calendar, Layers3, Heart, Scale, Share2, Sparkles, ChevronRight,
+  BedDouble, Bath, Car, Compass, Building2, Calendar, Heart, Scale, Share2, Sparkles, ChevronRight, ChevronLeft, Check, Play, Pause,
 } from "lucide-react";
+import { FloorPlan } from "@/components/property/floor-plan";
 import { Img } from "@/components/ui/img";
 import { QualityBadge, Tag } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PropitMap } from "@/components/map/propit-map";
 import { useDiscovery } from "@/store/discovery";
 import { POI_CATEGORY_LABEL } from "@/lib/data/pois";
-import { AMENITY_BY_SLUG } from "@/lib/data/developers";
+import { AMENITIES } from "@/lib/data/developers";
 import {
   calcEmi, formatArea, formatPrice, formatPriceSqft, formatRent, furnishingLabel,
   possessionLabel, propertyTypeLabel,
 } from "@/lib/format";
 import type { Developer, Locality, NearbyPlace, PoiCategory, Project, Property } from "@/types";
 import { cn } from "@/lib/utils";
+
+const PropitMap = dynamic(() => import("@/components/map/propit-map").then((module) => module.PropitMap), { ssr: false });
+const ScheduleVisit = dynamic(() => import("@/components/home/schedule-visit").then((module) => module.ScheduleVisit));
 
 export function PropertyDetail({
   property, locality, project, developer, similar, nearby,
@@ -30,39 +34,72 @@ export function PropertyDetail({
   similar: (Property & { localityName: string })[];
   nearby: NearbyPlace[];
 }) {
-  const { toggleSaved, savedIds, toggleCompare, compareIds, pushRecent, setAssistantOpen, anchors } =
+  const { toggleSaved, savedIds, toggleCompare, compareIds, pushRecent, setAssistantOpen, setViewedProperty, anchors } =
     useDiscovery();
   const [gallery, setGallery] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const galleryVisible = useInView(galleryRef, { amount: 0.2 });
+  const reduceMotion = useReducedMotion();
+  const imageCount = property.images.length;
+
+  useEffect(() => {
+    if (!playing || !galleryVisible || reduceMotion || imageCount < 2) return;
+    const timer = window.setInterval(() => {
+      if (!document.hidden) setGallery((index) => (index + 1) % imageCount);
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [playing, galleryVisible, reduceMotion, imageCount]);
+
+  function advancePhoto(direction: number) {
+    setPlaying(false);
+    setGallery((index) => (index + direction + imageCount) % imageCount);
+  }
+  const [areaUnit, setAreaUnit] = useState<"ft" | "m">("ft");
+  const isPlot = property.propertyType === "plot";
+  const isResidential = !isPlot && property.propertyType !== "commercial";
+  const [viewing, setViewing] = useState<"site" | "call" | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapVisible = useInView(mapRef, { once: true, margin: "300px" });
+  const mapLocalities = useMemo(() => [locality], [locality]);
+  const mapPoints = useMemo(() => [{
+    id: property.id, ...property.location, price: property.price,
+    bedrooms: property.bedrooms, type: property.propertyType,
+  }], [property]);
   const isSaved = savedIds.includes(property.id);
   const inCompare = compareIds.includes(property.id);
 
   useEffect(() => {
     pushRecent(property.id);
-  }, [property.id, pushRecent]);
+    setViewedProperty({ id: property.id, slug: property.slug, title: property.title });
+    return () => setViewedProperty(null);
+  }, [property.id, property.slug, property.title, pushRecent, setViewedProperty]);
 
   const price =
     property.listingType === "rent" && property.rentMonthly
       ? formatRent(property.rentMonthly)
       : formatPrice(property.price);
 
-  const mapLocalities = useMemo(
-    () => [{
-      slug: locality.slug, name: locality.name, center: locality.center,
-      boundary: locality.boundary, avgPriceSqft: locality.avgPriceSqft,
-    }],
-    [locality],
-  );
-
-  const mapPoints = useMemo(
-    () => [{
-      id: property.id, lat: property.location.lat, lng: property.location.lng,
-      price: property.price, bedrooms: property.bedrooms, type: property.propertyType,
-    }],
-    [property],
-  );
+  const areas = isPlot
+    ? [{ label: "Plot area", value: property.builtupAreaSqft, description: "Listed land area" }]
+    : [
+        { label: "Carpet area", value: property.carpetAreaSqft, description: "Usable floor area" },
+        { label: "Built-up area", value: property.builtupAreaSqft, description: "Area including walls" },
+        { label: "Super built-up area", value: property.superBuiltupAreaSqft, description: "Built-up area plus a share of common areas" },
+      ];
+  const amenities = new Map<string, string[]>();
+  for (const slug of new Set(property.amenities)) {
+    const amenity = AMENITIES.find((entry) => entry.slug === slug);
+    const category = amenity?.category ?? "Other amenities";
+    amenities.set(category, [...(amenities.get(category) ?? []), amenity?.name ?? slug]);
+  }
+  const sections = [
+    ["overview", "Overview"], ["areas", isPlot ? "Plot area" : "Area & floor plan"],
+    ["amenities", "Amenities"], ["costs", "Costs"], ["location", "Location"],
+  ];
 
   return (
-    <article className="pb-24">
+    <article className="pb-10 md:pb-14">
       {/* Gallery */}
       <section className="px-5 pt-6 md:px-8">
         <div className="mx-auto max-w-[1440px]">
@@ -74,13 +111,14 @@ export function PropertyDetail({
             <span className="truncate text-muted">{property.title}</span>
           </nav>
 
-          <div className="grid gap-2 md:grid-cols-[2fr_1fr]">
+          <div ref={galleryRef} className="grid gap-2 md:grid-cols-[2fr_1fr]">
+            <div className="relative">
             <motion.div
               key={gallery}
-              initial={{ opacity: 0.4 }}
-              animate={{ opacity: 1 }}
+              initial={gallery === 0 || reduceMotion ? false : { opacity: 0.72, scale: 0.995 }}
+              animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
-              className="overflow-hidden rounded-[var(--r-lg)]"
+              className="overflow-hidden rounded-[var(--r-lg)] shadow-e2"
             >
               <Img
                 src={property.images[gallery]?.url ?? ""}
@@ -91,11 +129,26 @@ export function PropertyDetail({
                 sizes="(max-width: 768px) 100vw, 66vw"
               />
             </motion.div>
+            {imageCount > 1 && <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 rounded-b-[var(--r-lg)] bg-gradient-to-t from-black/80 to-transparent p-2.5 pt-8 text-white sm:p-4 sm:pt-9">
+              <p aria-live={playing ? "off" : "polite"} className="truncate text-xs font-medium">
+                {property.images[gallery]?.roomTag} · {gallery + 1} / {imageCount}
+              </p>
+              <div className="flex shrink-0 gap-1">
+                {!reduceMotion && <button type="button" aria-label={playing ? "Pause photo slideshow" : "Play photo slideshow"}
+                  className="grid size-9 place-items-center rounded-full bg-black/55 hover:bg-black/80" onClick={() => setPlaying(!playing)}>
+                  {playing ? <Pause size={15} /> : <Play size={15} />}
+                </button>}
+                <button type="button" aria-label="Previous photo" className="grid size-9 place-items-center rounded-full bg-black/55 hover:bg-black/80" onClick={() => advancePhoto(-1)}><ChevronLeft size={17} /></button>
+                <button type="button" aria-label="Next photo" className="grid size-9 place-items-center rounded-full bg-black/55 hover:bg-black/80" onClick={() => advancePhoto(1)}><ChevronRight size={17} /></button>
+              </div>
+            </div>}
+            </div>
             <div className="grid grid-cols-4 gap-2 md:grid-cols-2">
               {property.images.slice(0, 4).map((img, i) => (
                 <button
                   key={i}
-                  onClick={() => setGallery(i)}
+                  onClick={() => { setPlaying(false); setGallery(i); }}
+                  aria-pressed={gallery === i}
                   className={cn(
                     "overflow-hidden rounded-[var(--r-md)] transition-all duration-[160ms]",
                     gallery === i ? "ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--paper)]" : "opacity-80 hover:opacity-100",
@@ -112,56 +165,88 @@ export function PropertyDetail({
 
       <div className="mx-auto mt-8 grid max-w-[1440px] gap-10 px-5 md:px-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0">
-          <header>
+          <header id="overview" className="scroll-mt-3">
             <div className="flex flex-wrap items-center gap-2">
               <QualityBadge quality={property.dataQuality} />
               <Tag>{propertyTypeLabel(property.propertyType)}</Tag>
               <Tag>{possessionLabel(property.possession)}</Tag>
               {property.reraNumber && <Tag>RERA {property.reraNumber}</Tag>}
             </div>
-            <h1 className="display mt-3 text-[36px] leading-tight text-ink md:text-[44px]">
+            <h1 className="mt-4 font-[family-name:var(--font-editorial)] text-[38px] leading-[1.02] tracking-[-0.045em] text-ink md:text-[54px]">
               {property.title}
             </h1>
             <p className="mt-2 text-[15px] text-muted">{property.address}</p>
           </header>
 
-          <dl className="mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-[var(--r-md)] border border-line bg-[var(--line)] sm:grid-cols-4">
-            <Fact icon={BedDouble} label="Bedrooms" value={property.bedrooms || "—"} />
-            <Fact icon={Bath} label="Bathrooms" value={property.bathrooms || "—"} />
-            <Fact icon={Car} label="Parking" value={property.parking || "—"} />
-            <Fact icon={Layers3} label="Built-up" value={formatArea(property.builtupAreaSqft)} />
-            <Fact icon={Compass} label="Facing" value={property.facing} />
-            <Fact icon={Building2} label="Floor" value={property.floor ? `${property.floor} of ${property.totalFloors}` : "Ground"} />
-            <Fact icon={Calendar} label="Available" value={property.availabilityDate} />
-            <Fact icon={Layers3} label="Carpet" value={formatArea(property.carpetAreaSqft)} />
+          <nav aria-label="Property sections" className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-y border-line py-3 text-[13px] font-semibold text-accent">
+            {sections.map(([id, label]) => <a key={id} href={`#${id}`} className="hover:underline">{label}</a>)}
+          </nav>
+          <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-[var(--r-md)] border border-line bg-[var(--line)] sm:grid-cols-3">
+            {isResidential && <>
+              <Fact icon={BedDouble} label="Bedrooms" value={property.bedrooms || "Studio"} />
+              <Fact icon={Bath} label="Bathrooms" value={property.bathrooms} />
+              <Fact icon={Car} label="Parking spaces" value={property.parking} />
+            </>}
+            {!isPlot && <Fact icon={Building2} label="Floor" value={property.floor ? `${property.floor} of ${property.totalFloors}` : "Ground"} />}
+            <Fact icon={Compass} label="Facing" value={property.facing || "Not listed"} />
+            <Fact icon={Calendar} label="Available" value={property.availabilityDate || "Not listed"} />
           </dl>
 
-          <Section title="About this home">
+          <Section title={isPlot ? "About this plot" : "About this property"}>
             <p className="max-w-[68ch] text-[15px] leading-relaxed text-muted">{property.description}</p>
           </Section>
 
-          {property.amenities.length > 0 && (
-            <Section title="Amenities">
-              <ul className="flex flex-wrap gap-1.5">
-                {property.amenities.map((a) => (
-                  <li key={a}>
-                    <span className="inline-flex h-8 items-center rounded-full border border-line bg-raised px-3 text-[13px] text-muted">
-                      {AMENITY_BY_SLUG.get(a as never)?.name ?? a}
-                    </span>
-                  </li>
+          <Section id="areas" title={isPlot ? "Plot area" : "Area & floor plan"}>
+            <div className="rounded-[var(--r-lg)] border border-line bg-raised p-4 sm:p-5">
+              <div role="group" aria-label="Area unit" className="mb-4 flex justify-end gap-1 text-[13px]">
+                {(["ft", "m"] as const).map((unit) => (
+                  <button key={unit} type="button" aria-pressed={unit === areaUnit} onClick={() => setAreaUnit(unit)}
+                    className={cn("rounded-full border px-3 py-1.5", unit === areaUnit ? "bg-accent text-[var(--accent-ink)]" : "text-muted")}>
+                    {unit === "ft" ? "sq.ft" : "sq.m"}
+                  </button>
                 ))}
-              </ul>
-            </Section>
-          )}
+              </div>
+              <dl className={cn("grid gap-3", !isPlot && "sm:grid-cols-3")}>
+                {areas.map(({ label, value, description }) => (
+                  <div key={label} className="rounded-[var(--r-md)] bg-sunk p-3">
+                    <dt className="text-[13px] font-semibold text-muted">{label}</dt>
+                    <dd className="tnum mt-1 text-[20px] font-semibold text-ink">
+                      {value && value > 0 ? areaUnit === "ft" ? formatArea(value) : `${(value * 0.09290304).toLocaleString("en-IN", { maximumFractionDigits: 1 })} sq.m` : "Not listed"}
+                    </dd>
+                    <dd className="mt-1 text-[12px] text-muted">{description}</dd>
+                  </div>
+                ))}
+              </dl>
+              {!isPlot && <FloorPlan url={property.floorPlanUrl} showDemo={isResidential} />}
+            </div>
+          </Section>
 
-          <Section title="Specifications">
+          <Section id="amenities" title="Amenities">
+            {amenities.size ? <div className="grid gap-3 sm:grid-cols-2">
+              {[...amenities].map(([category, names]) => (
+                <div key={category} className="rounded-[var(--r-md)] border border-line bg-raised p-4">
+                  <h3 className="mb-2 text-[13px] font-semibold text-ink">{category}</h3>
+                  <ul className="space-y-1.5 text-[13px] text-muted">
+                    {names.map((name) => <li key={name} className="flex items-center gap-2"><Check size={14} className="shrink-0 text-accent" aria-hidden="true" />{name}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div> : <p className="text-sm text-muted">Amenities not supplied for this listing.</p>}
+          </Section>
+
+          <Section id="costs" title="Costs & specifications">
             <dl className="grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
+              <Spec label={property.listingType === "rent" ? "Monthly rent" : "Listed price"} value={price} />
               <Spec label="Price per sq.ft" value={formatPriceSqft(property.pricePerSqft)} />
               <Spec label="Maintenance" value={`₹${property.maintenanceMonthly.toLocaleString("en-IN")}/mo`} />
+              {!isPlot && <>
               <Spec label="Furnishing" value={furnishingLabel(property.furnishing)} />
               <Spec label="Age" value={property.ageYears ? `${property.ageYears} years` : "New"} />
               <Spec label="Balconies" value={String(property.balconies)} />
               <Spec label="Total floors" value={String(property.totalFloors)} />
+              </>}
+              <Spec label="Possession" value={possessionLabel(property.possession)} />
+              <Spec label="RERA reference" value={property.reraNumber ?? "Not listed"} />
               {property.deposit != null && (
                 <Spec label="Deposit" value={formatPrice(property.deposit, { compact: false })} />
               )}
@@ -170,9 +255,11 @@ export function PropertyDetail({
           </Section>
 
           {/* Map + what's nearby */}
-          <Section title="Where it is">
-            <div className="overflow-hidden rounded-[var(--r-lg)] border border-line" style={{ height: 340 }}>
-              <PropitMap compact points={mapPoints} localities={mapLocalities} />
+          <Section id="location" title={`Location · ${locality.name}`}>
+            <div ref={mapRef} className="grid h-[280px] place-items-center overflow-hidden rounded-[var(--r-lg)] border border-line bg-sunk">
+              {mapVisible
+                ? <PropitMap compact localityScope={locality} followDiscoveryCamera={false} initialCenter={property.location} points={mapPoints} localities={mapLocalities} />
+                : <span className="text-sm text-muted">{property.address}</span>}
             </div>
             <NearbyGrid places={nearby} />
           </Section>
@@ -250,8 +337,8 @@ export function PropertyDetail({
             {property.listingType === "buy" && <EmiBlock price={property.price} />}
 
             <div className="mt-5 space-y-2">
-              <Button variant="primary" size="lg" className="w-full">Schedule a visit</Button>
-              <Button variant="secondary" size="lg" className="w-full">Request a callback</Button>
+              <Button variant="primary" size="lg" className="w-full" aria-expanded={viewing === "site"} onClick={() => setViewing(viewing === "site" ? null : "site")}>Schedule a visit</Button>
+              <Button variant="secondary" size="lg" className="w-full" aria-expanded={viewing === "call"} onClick={() => setViewing(viewing === "call" ? null : "call")}>Request a callback</Button>
               <Button
                 variant="ghost"
                 size="lg"
@@ -263,6 +350,7 @@ export function PropertyDetail({
               </Button>
             </div>
 
+            {viewing && <ScheduleVisit key={viewing} propertySlug={property.slug} initialMode={viewing} />}
             <div className="mt-4 flex items-center gap-2 border-t border-line pt-4">
               <button
                 onClick={() => toggleSaved(property.id)}
@@ -317,10 +405,10 @@ export function PropertyDetail({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-11">
-      <h2 className="display mb-4 text-[24px] text-ink">{title}</h2>
+    <section id={id} className="mt-9 scroll-mt-3">
+      <h2 className="mb-4 font-[family-name:var(--font-editorial)] text-[30px] leading-tight tracking-[-0.035em] text-ink">{title}</h2>
       {children}
     </section>
   );

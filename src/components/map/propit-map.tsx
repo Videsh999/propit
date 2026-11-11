@@ -19,7 +19,8 @@ import "@/lib/map/worker";
 import { useDiscovery } from "@/store/discovery";
 import { circleRing, haversineKm } from "@/lib/geo/distance";
 import { formatPrice } from "@/lib/format";
-import type { Bounds, Locality, Poi } from "@/types";
+import { boundsFromPoints } from "@/lib/geo/spatial";
+import type { Bounds, LatLng, Locality, Poi } from "@/types";
 import { HYDERABAD_MAX_BOUNDS, INITIAL_FIT, MAX_ZOOM, MIN_ZOOM } from "@/lib/map/viewport";
 import { useOrr } from "@/lib/hooks/use-orr";
 import { CLUSTER_MAX_ZOOM } from "@/lib/map/constants";
@@ -70,6 +71,10 @@ interface Props {
   interactive?: boolean;
   onBoundsChange?: (b: Bounds, zoom: number) => void;
   compact?: boolean;
+  scrollZoom?: boolean;
+  initialCenter?: LatLng;
+  localityScope?: Pick<Locality, "boundary">;
+  followDiscoveryCamera?: boolean;
 }
 
 /**
@@ -121,7 +126,17 @@ export function PropitMap({
   interactive = true,
   onBoundsChange,
   compact = false,
+  scrollZoom = !compact,
+  initialCenter,
+  localityScope,
+  followDiscoveryCamera = true,
 }: Props) {
+  const localityPoints = useMemo(
+    () => localityScope?.boundary.map(([lng, lat]) => ({ lng, lat })) ?? [],
+    [localityScope],
+  );
+  const openingBounds = boundsFromPoints(localityPoints);
+  const limitBounds = boundsFromPoints(localityPoints, 0.48);
   const mapRef = useRef<MapRef | null>(null);
   const [tileError, setTileError] = useState(false);
   const webglOk = useSyncExternalStore(subscribeNever, hasWebGL, () => true);
@@ -291,7 +306,7 @@ export function PropitMap({
 
   // ---- price chip images -------------------------------------------------
   const registerImages = useCallback((map: MapLibreMap | undefined) => {
-    if (!map) return false;
+    if (!map?.getStyle()) return false;
     let added = 0;
     for (const [name, spec] of Object.entries(PILL_SPECS)) {
       if (map.hasImage(name)) {
@@ -366,7 +381,7 @@ export function PropitMap({
 
   // ---- imperative camera commands ---------------------------------------
   useEffect(() => {
-    if (!command || !mapRef.current) return;
+    if (!followDiscoveryCamera || !command || !mapRef.current) return;
     const map = mapRef.current.getMap();
     const reduce =
       typeof window !== "undefined" &&
@@ -393,7 +408,7 @@ export function PropitMap({
       );
     }
     consumeCommand();
-  }, [command, consumeCommand, compact]);
+  }, [command, consumeCommand, compact, followDiscoveryCamera]);
 
   // ---- GeoJSON sources ---------------------------------------------------
   const propertyGeoJson = useMemo(
@@ -806,8 +821,12 @@ export function PropitMap({
       <Map
         ref={mapRef}
         mapStyle={style}
-        initialViewState={INITIAL_FIT}
-        maxBounds={HYDERABAD_MAX_BOUNDS}
+        initialViewState={initialCenter
+          ? { latitude: initialCenter.lat, longitude: initialCenter.lng, zoom: 15 }
+          : openingBounds
+            ? { bounds: [[openingBounds.west, openingBounds.south], [openingBounds.east, openingBounds.north]], fitBoundsOptions: { padding: 18 } }
+            : INITIAL_FIT}
+        maxBounds={limitBounds ? [limitBounds.west, limitBounds.south, limitBounds.east, limitBounds.north] : HYDERABAD_MAX_BOUNDS}
         onError={(e) => {
           if (process.env.NODE_ENV === "development") console.warn("[map]", e.error?.message);
         }}
@@ -868,6 +887,7 @@ export function PropitMap({
         attributionControl={{ compact: true }}
         maxZoom={MAX_ZOOM}
         minZoom={MIN_ZOOM}
+        scrollZoom={scrollZoom}
         dragRotate={false}
         touchPitch={false}
         style={{ width: "100%", height: "100%" }}
@@ -883,8 +903,8 @@ export function PropitMap({
                 "fill-color": [
                   "case",
                   ["get", "selected"],
-                  "#0066CC",
-                  layers.priceHeat ? ["interpolate", ["linear"], ["get", "priceSqft"], 4200, "#248A3D", 9000, "#C93400", 17500, "#D70015"] : "#0066CC",
+                  "#285640",
+                  layers.priceHeat ? ["interpolate", ["linear"], ["get", "priceSqft"], 4200, "#248A3D", 9000, "#C93400", 17500, "#D70015"] : "#285640",
                 ],
                 // The unselected wash existed to give an empty map some texture.
                 // Now that real streets and water render underneath, it reads as
@@ -897,7 +917,7 @@ export function PropitMap({
               type="line"
               maxzoom={14}
               paint={{
-                "line-color": ["case", ["get", "selected"], "#0066CC", "#A89C82"],
+                "line-color": ["case", ["get", "selected"], "#285640", "#A89C82"],
                 "line-width": ["case", ["get", "selected"], 2, 0.9],
                 "line-opacity": ["case", ["get", "selected"], 0.9, 0.45],
               }}
@@ -916,7 +936,7 @@ export function PropitMap({
               }}
               paint={{
                 "text-color": "#1D1D1F",
-                "text-halo-color": "#F5F5F7",
+                "text-halo-color": "#F7F4EC",
                 "text-halo-width": 1.8,
               }}
             />
@@ -931,7 +951,7 @@ export function PropitMap({
             type="line"
             layout={{ "line-cap": "round", "line-join": "round" }}
             paint={{
-              "line-color": "#F5F5F7",
+              "line-color": "#F7F4EC",
               "line-width": ["interpolate", ["linear"], ["zoom"], 9, 4, 12, 7, 15, 12],
               "line-opacity": 0.9,
             }}
@@ -941,7 +961,7 @@ export function PropitMap({
             type="line"
             layout={{ "line-cap": "round", "line-join": "round" }}
             paint={{
-              "line-color": "#0066CC",
+              "line-color": "#285640",
               "line-width": ["interpolate", ["linear"], ["zoom"], 9, 1.6, 12, 2.6, 15, 4],
               "line-opacity": ["interpolate", ["linear"], ["zoom"], 9, 0.75, 13, 0.6],
             }}
@@ -960,8 +980,8 @@ export function PropitMap({
               "text-padding": 4,
             }}
             paint={{
-              "text-color": "#0066CC",
-              "text-halo-color": "#F5F5F7",
+              "text-color": "#285640",
+              "text-halo-color": "#F7F4EC",
               "text-halo-width": 1.6,
             }}
           />
@@ -969,12 +989,12 @@ export function PropitMap({
 
         {/* Livable zone */}
         <Source id="zone" type="geojson" data={zoneGeoJson}>
-          <Layer id="zone-fill" type="fill" paint={{ "fill-color": "#0066CC", "fill-opacity": 0.12 }} />
+          <Layer id="zone-fill" type="fill" paint={{ "fill-color": "#285640", "fill-opacity": 0.12 }} />
           <Layer
             id="zone-line"
             type="line"
             paint={{
-              "line-color": "#0066CC",
+              "line-color": "#285640",
               "line-width": 1.6,
               "line-dasharray": [3, 2],
               "line-opacity": 0.75,
@@ -1038,7 +1058,7 @@ export function PropitMap({
               paint={{
                 "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 3, 15, 6],
                 "circle-color": "#FBFAF7",
-                "circle-stroke-color": "#0066CC",
+                "circle-stroke-color": "#285640",
                 "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 10, 1.2, 15, 1.8],
                 "circle-stroke-opacity": 0.72,
               }}
@@ -1070,7 +1090,7 @@ export function PropitMap({
               paint={{
                 "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 4, 14, 7],
                 "circle-color": "#C93400",
-                "circle-stroke-color": "#F5F5F7",
+                "circle-stroke-color": "#F7F4EC",
                 "circle-stroke-width": 2,
               }}
             />
@@ -1087,8 +1107,8 @@ export function PropitMap({
                 "text-max-width": 9,
               }}
               paint={{
-                "text-color": "#0066CC",
-                "text-halo-color": "#F5F5F7",
+                "text-color": "#285640",
+                "text-halo-color": "#F7F4EC",
                 "text-halo-width": 1.6,
               }}
             />
@@ -1108,7 +1128,7 @@ export function PropitMap({
                 "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 2.4, 15, 3.6],
                 "circle-color": "#8A7B5E",
                 "circle-opacity": 0.28,
-                "circle-stroke-color": "#F5F5F7",
+                "circle-stroke-color": "#F7F4EC",
                 "circle-stroke-width": 0.8,
                 "circle-stroke-opacity": 0.4,
               }}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { X, Scale, Heart, ArrowUpRight } from "lucide-react";
+import { X, Scale, Heart, ArrowUpRight, Sparkles } from "lucide-react";
 import { useDiscovery } from "@/store/discovery";
 import { Img } from "@/components/ui/img";
 import { QualityBadge } from "@/components/ui/badge";
@@ -11,8 +11,8 @@ import { fitLabel } from "@/lib/scoring/fit";
 import { cn } from "@/lib/utils";
 
 /** Floating preview that animates out of the marker, not a modal over the page. */
-export function PropertyPreview() {
-  const { previewProperty, select, toggleSaved, savedIds, toggleCompare, compareIds } = useDiscovery();
+export function PropertyPreview({ className }: { className?: string } = {}) {
+  const { previewProperty, select, toggleSaved, savedIds, toggleCompare, compareIds, setAssistantOpen } = useDiscovery();
   if (!previewProperty) return null;
 
   const p = previewProperty;
@@ -29,7 +29,10 @@ export function PropertyPreview() {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 12, scale: 0.97 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-      className="absolute bottom-3 left-3 z-30 w-[340px] overflow-hidden rounded-[var(--r-lg)] border border-line bg-raised shadow-[var(--e3)]"
+      className={cn(
+        "absolute bottom-3 left-3 z-30 max-h-[min(500px,calc(100%-24px))] w-[min(340px,calc(100%-24px))] overflow-y-auto rounded-[var(--r-lg)] border border-line bg-raised shadow-[var(--e3)]",
+        className,
+      )}
       role="dialog"
       aria-label={p.title}
     >
@@ -93,7 +96,13 @@ export function PropertyPreview() {
           </ul>
         )}
 
-        <div className="mt-3.5 flex items-center gap-1.5">
+        <button
+          onClick={() => setAssistantOpen(true)}
+          className="mt-3 inline-flex min-h-8 items-center gap-1.5 text-[13px] font-semibold text-accent hover:underline"
+        >
+          <Sparkles size={14} /> Ask PropIT about this home
+        </button>
+        <div className="mt-2 flex items-center gap-1.5">
           <Link
             href={`/property/${p.slug}`}
             className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-[var(--r-sm)] bg-accent px-3 text-[13px] font-medium text-[var(--accent-ink)] transition-colors hover:bg-accent-hover"

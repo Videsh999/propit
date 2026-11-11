@@ -39,7 +39,7 @@ export function Logo({
           S.text,
         )}
       >
-        <span style={{ color: "var(--brand-navy)" }}>Prop</span>
+        <span style={{ color: "var(--brand-forest)" }}>Prop</span>
         <span style={{ color: "var(--brand-gold)" }}>IT</span>
       </span>
     </span>

@@ -578,7 +578,7 @@ function PropertySlide({
   function reveal() {
     select(p.id, p);
     flyTo(p.location, 15);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.body.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (

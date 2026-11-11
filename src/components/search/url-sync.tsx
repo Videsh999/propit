@@ -69,32 +69,41 @@ function parse(sp: URLSearchParams): { filters: PropertyFilters; anchors: Anchor
 export function SearchUrlSync() {
   const searchParams = useSearchParams();
   const lastWritten = useRef<string | null>(null);
-  const applied = useRef<string | null>(null);
+  const applyingUrl = useRef(false);
 
   // ---- URL → store ----
   useEffect(() => {
     const incoming = searchParams.toString();
     // Ignore the echo of our own replaceState.
-    if (incoming === lastWritten.current || incoming === applied.current) return;
-    applied.current = incoming;
+    if (incoming === lastWritten.current) return;
+    lastWritten.current = null;
 
     const { filters, anchors, radius } = parse(new URLSearchParams(incoming));
     const store = useDiscovery.getState();
-    store.setFilters(filters);
-    store.setUseBounds(false);
-    if (anchors) {
-      store.clearAnchors();
-      for (const a of anchors) store.addAnchor(a);
-    }
-    if (radius) {
-      store.setRadius({ center: { lat: radius.lat, lng: radius.lng }, km: radius.km, label: "Search area" });
-      store.flyTo({ lat: radius.lat, lng: radius.lng }, 12.4);
+    applyingUrl.current = true;
+    try {
+      useDiscovery.setState({
+        filters,
+        anchors: anchors ?? [],
+        radius: radius ? { center: { lat: radius.lat, lng: radius.lng }, km: radius.km, label: "Search area" } : null,
+        useBounds: false,
+        searchedBounds: null,
+        polygon: null,
+        selectedLocalitySlug: null,
+        selectedPropertyId: null,
+        previewProperty: null,
+        command: null,
+      });
+      if (radius) store.flyTo({ lat: radius.lat, lng: radius.lng }, 12.4);
+    } finally {
+      applyingUrl.current = false;
     }
   }, [searchParams]);
 
   // ---- store → URL ----
   useEffect(() =>
     useDiscovery.subscribe((state, prev) => {
+      if (applyingUrl.current) return;
       if (
         state.filters === prev.filters &&
         state.anchors === prev.anchors &&

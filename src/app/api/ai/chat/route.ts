@@ -1,7 +1,7 @@
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { TOOL_DEFS, runTool, systemPrompt, type ClientAction, type ToolContext } from "@/lib/ai/tools";
-import { fallbackConcierge } from "@/lib/ai/fallback";
+import { answerPropertyQuestion, fallbackConcierge } from "@/lib/ai/fallback";
 import { anchorSchema, filtersSchema } from "@/lib/api/schema";
 import { describeSituation } from "@/lib/ai/situation";
 
@@ -60,10 +60,17 @@ export async function POST(req: Request) {
         controller.close();
       };
 
+      const last = body.messages[body.messages.length - 1];
+      const propertyAnswer = answerPropertyQuestion(last.content, ctx.propertyId);
+      if (propertyAnswer) {
+        sse(controller, { type: "text", delta: propertyAnswer });
+        done({ mode: "listing" });
+        return;
+      }
+
       // ---- No key: deterministic concierge over the same tools/data ----
       if (!apiKey) {
         try {
-          const last = body.messages[body.messages.length - 1];
           const out = await fallbackConcierge(last.content, ctx);
           for (const s of out.statuses) sse(controller, { type: "status", text: s });
           for (const a of out.actions) sse(controller, { type: "action", action: a });
@@ -146,7 +153,6 @@ export async function POST(req: Request) {
         console.warn(`[ai/chat] model unavailable (${reason}); using the deterministic concierge`);
         // Degrade to the deterministic concierge rather than failing outright.
         try {
-          const last = body.messages[body.messages.length - 1];
           const out = await fallbackConcierge(last.content, ctx);
           for (const a of out.actions) sse(controller, { type: "action", action: a });
           sse(controller, { type: "text", delta: out.text });

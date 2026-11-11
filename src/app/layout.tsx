@@ -6,6 +6,7 @@ import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { SITE_URL } from "@/lib/site-url";
 import { Providers } from "@/components/providers";
+import { ScrollRestoration } from "@/components/nav/scroll-restoration";
 import { Navbar } from "@/components/nav/navbar";
 import { Footer } from "@/components/nav/footer";
 import { CommandPalette } from "@/components/search/command-palette";
@@ -51,8 +52,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F5F5F7" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+    { media: "(prefers-color-scheme: light)", color: "#F7F4EC" },
+    { media: "(prefers-color-scheme: dark)", color: "#16221C" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -65,6 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <NuqsAdapter>
           <Providers>
+            <ScrollRestoration />
             <Suspense fallback={<div className="h-[72px] border-b border-line" />}>
               <Navbar />
             </Suspense>

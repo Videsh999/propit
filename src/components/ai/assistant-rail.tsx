@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { Sparkles, X, ArrowUp, Check, Loader2 } from "lucide-react";
 import { useDiscovery } from "@/store/discovery";
@@ -24,13 +25,20 @@ const STARTERS = [
 
 export function AssistantRail() {
   const {
-    assistantOpen, setAssistantOpen, filters, anchors,
-    selectedLocalitySlug, selectedPropertyId,
+    assistantOpen, setAssistantOpen, assistantDraft, setAssistantDraft, filters, anchors,
+    selectedLocalitySlug, selectedPropertyId, viewedProperty, previewProperty,
     setFilters, addAnchor, removeAnchor, clearAnchors, setRadius,
     flyTo, select, setUseBounds, toggleLayer, toggleCompare, clearCompare,
   } = useDiscovery();
+  const pathname = usePathname();
+  const activeDetail = viewedProperty && pathname === `/property/${viewedProperty.slug}` ? viewedProperty : null;
+  const onDiscovery = pathname === "/" || pathname === "/search";
+  const propertyId = activeDetail?.id ?? (onDiscovery ? selectedPropertyId : null);
+  const propertyTitle = activeDetail?.title ?? (onDiscovery && previewProperty?.id === propertyId ? previewProperty?.title : null);
+  const propertyPrompts = ["Tell me about this property", "What does it cost?", "What amenities does it have?", "What’s nearby?"];
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
+  const composerValue = assistantDraft ?? input;
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const localitiesRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
@@ -113,6 +121,7 @@ export function AssistantRail() {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
     setInput("");
+    setAssistantDraft(null);
     setBusy(true);
 
     const history = [...messages, { role: "user" as const, content: trimmed }];
@@ -123,12 +132,12 @@ export function AssistantRail() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: history.map((m) => ({ role: m.role, content: m.content })),
+          messages: history.slice(-39).map((m) => ({ role: m.role, content: m.content })),
           context: {
             filters,
             anchors,
-            localitySlug: selectedLocalitySlug,
-            propertyId: selectedPropertyId,
+            localitySlug: onDiscovery ? selectedLocalitySlug : null,
+            propertyId,
             resultCount: resultCountRef.current,
           },
         }),
@@ -208,29 +217,41 @@ export function AssistantRail() {
   }
 
   return (
-    <AnimatePresence>
+    <>
+      {!assistantOpen && (
+        <button type="button" onClick={() => setAssistantOpen(true)}
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[45] inline-flex h-12 items-center gap-2 rounded-full border border-[#326450] bg-[#153e30] px-4 text-sm font-semibold text-white shadow-[0_6px_24px_#102e2a38] transition-colors hover:bg-[#245640] sm:bottom-6 sm:right-6"
+          aria-controls="propit-assistant" aria-expanded={false}>
+          <Sparkles size={17} aria-hidden="true" className="text-[#bce6d1]" /> Ask PropIT
+        </button>
+      )}
+      <AnimatePresence>
       {assistantOpen && (
         <motion.aside
-          initial={{ x: 400, opacity: 0 }}
+          initial={{ x: 24, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          exit={{ x: 400, opacity: 0 }}
+          exit={{ x: 24, opacity: 0 }}
           transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed right-0 top-0 z-[70] flex h-full w-full max-w-[400px] flex-col border-l border-line bg-paper"
+          id="propit-assistant"
+          className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[70] flex h-[min(640px,calc(100dvh-32px))] w-[calc(100%-24px)] max-w-[390px] flex-col overflow-hidden rounded-2xl border border-line bg-paper shadow-[var(--e3)] sm:bottom-6 sm:right-6"
           aria-label="PropIT assistant"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setAssistantOpen(false);
+          }}
         >
           <header className="flex items-center justify-between border-b border-line px-5 py-4">
-            <div className="flex items-center gap-2">
-              <span className="grid h-7 w-7 place-items-center rounded-full bg-accent text-[var(--accent-ink)]">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent text-[var(--accent-ink)]">
                 <Sparkles size={13} strokeWidth={2} />
               </span>
-              <div>
-                <h2 className="text-[14px] font-medium text-ink">PropIT</h2>
-                <p className="text-[11px] text-faint">Grounded in real listings</p>
+              <div className="min-w-0">
+                <h2 className="text-[14px] font-semibold text-ink">Ask PropIT</h2>
+                <p className="truncate text-[11px] text-faint">{propertyTitle ?? "Hyderabad property assistant"}</p>
               </div>
             </div>
             <button
               onClick={() => setAssistantOpen(false)}
-              className="grid h-8 w-8 place-items-center rounded-[var(--r-sm)] text-faint hover:bg-sunk hover:text-ink"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-[var(--r-sm)] text-faint hover:bg-sunk hover:text-ink"
               aria-label="Close assistant"
             >
               <X size={16} strokeWidth={1.75} />
@@ -240,6 +261,12 @@ export function AssistantRail() {
           <div ref={scrollRef} className="scroll-quiet flex-1 space-y-5 overflow-y-auto px-5 py-5">
             {messages.length === 0 && (
               <div>
+                {propertyId ? (
+                  <>
+                    <p className="display text-[24px] leading-tight text-ink">What would you like to know?</p>
+                    <p className="mt-3 text-[13px] leading-relaxed text-muted">Ask about the home you’re viewing, from the listed price to nearby places.</p>
+                  </>
+                ) : <>
                 <p className="display text-[24px] leading-tight text-ink">
                   Tell me where
                   <br />
@@ -249,8 +276,9 @@ export function AssistantRail() {
                   I can place your office and your child&apos;s school on the map, work out the area
                   that satisfies both, and show you what&apos;s inside it.
                 </p>
+                </>}
                 <div className="mt-5 space-y-1.5">
-                  {STARTERS.map((s) => (
+                  {(propertyId ? propertyPrompts : STARTERS).map((s) => (
                     <button
                       key={s}
                       onClick={() => send(s)}
@@ -263,6 +291,11 @@ export function AssistantRail() {
               </div>
             )}
 
+            {messages.length > 0 && propertyId && (
+              <button disabled={busy} onClick={() => send(propertyPrompts[0])} className="rounded-full border border-line bg-raised px-3 py-1.5 text-[12px] font-medium text-accent disabled:opacity-50">
+                {propertyPrompts[0]}
+              </button>
+            )}
             {messages.map((m, i) => (
               <div key={i}>
                 {m.role === "user" ? (
@@ -294,31 +327,32 @@ export function AssistantRail() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              send(input);
+              send(composerValue);
             }}
             className="border-t border-line p-3"
           >
             <div className="flex items-end gap-2 rounded-[var(--r-md)] border border-line bg-raised p-2 focus-within:border-[var(--accent-line)]">
               <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
+                value={composerValue}
+                onChange={(e) => { setAssistantDraft(null); setInput(e.target.value); }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    send(input);
+                    send(composerValue);
                   }
                 }}
                 rows={1}
-                placeholder="Ask about prices, areas, or what fits your life…"
+                maxLength={8000}
+                placeholder={propertyId ? "Ask about this home…" : "Ask about homes or localities…"}
                 aria-label="Message PropIT"
                 className="max-h-32 min-h-[24px] flex-1 resize-none bg-transparent px-1 text-[14px] text-ink outline-none placeholder:text-faint"
               />
               <button
                 type="submit"
-                disabled={!input.trim() || busy}
+                disabled={!composerValue.trim() || busy}
                 className={cn(
                   "grid h-8 w-8 shrink-0 place-items-center rounded-[var(--r-sm)] transition-colors",
-                  input.trim() && !busy
+                  composerValue.trim() && !busy
                     ? "bg-accent text-[var(--accent-ink)] hover:bg-accent-hover"
                     : "bg-sunk text-faint",
                 )}
@@ -328,13 +362,13 @@ export function AssistantRail() {
               </button>
             </div>
             <p className="mt-2 px-1 text-[11px] leading-relaxed text-faint">
-              PropIT answers from its own listings. Figures it can&apos;t verify are labelled — and it
-              won&apos;t invent one.
+              Answers use PropIT listing data. Showcase listings can include estimated figures and illustrative photos.
             </p>
           </form>
         </motion.aside>
       )}
-    </AnimatePresence>
+      </AnimatePresence>
+    </>
   );
 }
 

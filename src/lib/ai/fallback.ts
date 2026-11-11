@@ -1,9 +1,11 @@
 import "server-only";
 import { parseQuery } from "@/lib/search/parser";
 import { getStore } from "@/lib/data/store";
+import { AMENITIES } from "@/lib/data/developers";
+import type { Property } from "@/types";
 import { runTool, type ClientAction, type ToolContext } from "./tools";
-import { formatPrice, formatPriceSqft } from "@/lib/format";
-import { localityIntelligence } from "@/lib/data/repository";
+import { bhkLabel, formatArea, formatDistance, formatPrice, formatPriceSqft, formatRent, furnishingLabel, possessionLabel, propertyTypeLabel } from "@/lib/format";
+import { localityIntelligence, nearbyPlaces } from "@/lib/data/repository";
 
 /**
  * Deterministic concierge used when no LLM key is configured.
@@ -16,6 +18,9 @@ export async function fallbackConcierge(
   message: string,
   ctx: ToolContext,
 ): Promise<{ text: string; actions: ClientAction[]; statuses: string[] }> {
+  const propertyAnswer = answerPropertyQuestion(message, ctx.propertyId);
+  if (propertyAnswer) return { text: propertyAnswer, actions: [], statuses: [] };
+
   const store = getStore();
   const parsed = parseQuery(
     message,
@@ -195,4 +200,65 @@ export async function fallbackConcierge(
     actions,
     statuses,
   };
+}
+
+
+function asksAboutProperty(message: string, mentionsLocality: boolean): boolean {
+  if (/\b(?:this|current|selected) (?:property|listing|home|apartment|villa)\b/i.test(message)) return true;
+  if (mentionsLocality || /\b(?:find|show me|search|compare|under|within|looking for|my office|my school)\b/i.test(message)) return false;
+  return /\b(?:it|its|price|cost|amenities|nearby|maintenance|deposit|ready|rera|parking|possession|bedrooms?|bathrooms?|furnish\w*|carpet area|built.up area|super area|floor|facing|size)\b/i.test(message);
+}
+
+export function answerPropertyQuestion(question: string, propertyId: string | null | undefined): string | null {
+  if (!propertyId) return null;
+  const store = getStore();
+  const property = store.propertyById.get(propertyId);
+  const normalized = question.toLowerCase();
+  const mentionsLocality = store.localities.some(({ name }) => normalized.includes(name.toLowerCase()));
+  return property && asksAboutProperty(question, mentionsLocality) ? describeProperty(property, question) : null;
+}
+
+function describeProperty(property: Property, question: string): string {
+  const store = getStore();
+  const project = property.projectId ? store.projectById.get(property.projectId) : undefined;
+  const price = property.listingType === "rent"
+    ? property.rentMonthly === null ? "Monthly rent unavailable" : formatRent(property.rentMonthly)
+    : formatPrice(property.price);
+  const amenities = property.amenities.map((slug) => AMENITIES.find((amenity) => amenity.slug === slug)?.name ?? slug);
+  const lines = [`**${property.title}**`, property.address];
+  const locationQuestion = /\b(?:nearby|metro|schools?|hospitals?|parks?|commute|distance|surroundings)\b/i.test(question);
+
+  if (locationQuestion) {
+    const places = nearbyPlaces(property.location, ["school", "hospital", "metro", "office_hub", "mall", "park"], 6, 1)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+    lines.push("", places.length ? "Nearby places by straight-line distance" : "The listing has no mapped places in these categories within 6 km.");
+    for (const place of places) lines.push(`· ${place.name} · ${formatDistance(place.distanceKm)}`);
+  } else {
+    lines.push(
+      "",
+      `· **Listed price** ${price}`,
+      `· **Property** ${propertyTypeLabel(property.propertyType)}${property.bedrooms > 0 ? ` · ${bhkLabel(property.bedrooms)}` : ""} · ${formatArea(property.builtupAreaSqft)} ${property.propertyType === "plot" ? "plot area" : "built-up"}`,
+      `· **Possession** ${possessionLabel(property.possession)}`,
+    );
+    if (project) lines.push(`· **Development** ${project.name}`);
+    if (property.bathrooms > 0) lines.push(`· **Layout** ${property.bathrooms} bath · ${furnishingLabel(property.furnishing)}`);
+    if (property.maintenanceMonthly > 0) lines.push(`· **Maintenance** ${formatRent(property.maintenanceMonthly)}`);
+    if (property.listingType === "rent" && property.deposit !== null) lines.push(`· **Deposit** ${formatPrice(property.deposit, { compact: false })}`);
+    if (property.propertyType !== "plot") {
+      if (property.carpetAreaSqft > 0) lines.push(`· **Carpet area** ${formatArea(property.carpetAreaSqft)}`);
+      lines.push(`· **Super built-up area** ${property.superBuiltupAreaSqft ? formatArea(property.superBuiltupAreaSqft) : "Not listed"}`);
+    }
+    if (/\b(?:floor|facing|parking|layout|specs?)\b/i.test(question)) {
+      if (property.totalFloors > 0) lines.push(`· **Floor** ${property.floor} of ${property.totalFloors}`);
+      if (property.facing) lines.push(`· **Facing** ${property.facing}`);
+      lines.push(`· **Parking spaces** ${property.parking}`);
+    }
+    if (property.reraNumber) lines.push(`· **RERA number in listing** ${property.reraNumber}`);
+    else if (/\brera\b/i.test(question)) lines.push("· **RERA number** Unavailable in the listing");
+    lines.push("", amenities.length ? `**Listed amenities** ${amenities.join(", ")}.` : "The listing has no amenity details.");
+  }
+  lines.push("", property.dataQuality === "estimated"
+    ? "_This listing contains estimated figures._"
+    : "_Details are from the PropIT listing._");
+  return lines.join("\n");
 }

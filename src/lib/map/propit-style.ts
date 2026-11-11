@@ -17,29 +17,18 @@ export interface PropitPalette {
 }
 
 export const LIGHT_PALETTE: PropitPalette = {
-  // Neutral grey, a shade deeper than the page so the map reads as its own
-  // surface rather than a hole in it.
-  land: "#e8e8eb",
-  landAlt: "#e0e0e4",
-  // Water and parks keep real hue — a map where you cannot tell land from lake
-  // is not restrained, it is broken. These are Apple Maps' tints: a desaturated
-  // blue that sits beside the UI's own blue without competing, and a green that
-  // reads as planting rather than paint. Both are tuned against
-  // scripts/check-map-legibility.ts rather than by eye — the first pass of this
-  // palette was prettier, missed three thresholds, and would have shipped a map
-  // you could not read.
-  water: "#7fb4e0",
-  green: "#9ec98a",
-  // Classic light-basemap cartography: the roadway is lighter than the land and
-  // a mid-tone casing underneath gives it its edge. The casing does the work.
-  road: "#ffffff",
-  roadMajor: "#ffffff",
-  roadCasing: "#a8a8b0",
-  building: "#d2d2d7",
-  label: "#4d4d51",
-  labelHalo: "#f5f5f7",
-  labelStrong: "#1d1d1f",
-  boundary: "#a8a8b0",
+  land: "#ece7da",
+  landAlt: "#e4dfd2",
+  water: "#8abbb8",
+  green: "#a9c48f",
+  road: "#fffdf8",
+  roadMajor: "#fffdf8",
+  roadCasing: "#a8a394",
+  building: "#d6cec0",
+  label: "#4d554c",
+  labelHalo: "#f7f4ec",
+  labelStrong: "#22332b",
+  boundary: "#a8a394",
 };
 
 export const DARK_PALETTE: PropitPalette = {

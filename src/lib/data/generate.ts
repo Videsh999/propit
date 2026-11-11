@@ -297,11 +297,11 @@ export function generate(): GeneratedData {
         availabilityDate: possession === "ready" ? "Immediate" : `${2026 + Math.floor(rnd() * 3)}`,
         amenities,
         images: imageSet(seed, 5),
-        description: `${title} in ${loc.name}. ${loc.character}. ${
-          project ? `Part of ${project.name}, a ${project.towers}-tower development. ` : ""
-        }${builtup} sq.ft built-up${
-          beds ? ` with ${beds} bedrooms and ${Math.max(1, beds - 1)} bathrooms` : ""
-        }, ${FACINGS[Math.floor(rnd() * FACINGS.length)].toLowerCase()} facing.`,
+        description: (() => {
+          // Keep the seed sequence stable for existing listing URLs and inventory.
+          rnd();
+          return project ? `Part of ${project.name} in ${loc.name}. ${loc.character}.` : loc.character + ".";
+        })(),
         isVerified,
         reraNumber: project?.reraNumber ?? (rnd() > 0.6 ? `P02400${String(1000 + Math.floor(rnd() * 8999))}` : null),
         dataQuality: isVerified ? "verified" : "listed",

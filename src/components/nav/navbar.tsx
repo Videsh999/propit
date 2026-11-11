@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Search, Sparkles, User, Menu, X } from "lucide-react";
+import { useState } from "react";
+import { Search, User, Menu, X } from "lucide-react";
 import { Logo } from "@/components/nav/logo";
 import { cn } from "@/lib/utils";
 import { useDiscovery } from "@/store/discovery";
-import { Button } from "@/components/ui/button";
 import { Link000 } from "@/components/ui/skiper-ui/skiper40";
 
 const LINKS = [
@@ -20,26 +19,15 @@ const LINKS = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const setPaletteOpen = useDiscovery((s) => s.setPaletteOpen);
-  const setAssistantOpen = useDiscovery((s) => s.setAssistantOpen);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 80);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full",
-        "transition-[height,background-color,border-color,backdrop-filter] duration-[320ms] [transition-timing-function:var(--ease)]",
-        scrolled
-          ? "h-14 border-b border-line bg-[color-mix(in_srgb,var(--paper)_82%,transparent)] backdrop-blur-xl backdrop-saturate-150"
-          : "h-[72px] border-b border-transparent bg-paper",
+        "sticky top-0 z-50 h-[72px] w-full border-b border-line",
+        "bg-paper text-ink",
       )}
     >
       <nav className="mx-auto flex h-full max-w-[1440px] items-center gap-8 px-5 md:px-8">
@@ -76,16 +64,6 @@ export function Navbar() {
               ⌘K
             </kbd>
           </button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setAssistantOpen(true)}
-          >
-            <Sparkles size={14} strokeWidth={1.75} />
-            <span className="hidden sm:inline">Ask PropIT</span>
-          </Button>
 
           <Link
             href="/profile"

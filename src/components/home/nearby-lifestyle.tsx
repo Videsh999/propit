@@ -67,7 +67,7 @@ export function NearbyLifestyle({ corridors }: { corridors: CorridorReach[] }) {
     setUseBounds(false);
     selectLocality(current.slug);
     flyTo(current.center, 13.4);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.body.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
