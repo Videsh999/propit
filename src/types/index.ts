@@ -93,7 +93,42 @@ export interface Developer {
   logoMark: string;
 }
 
+export type ProjectSpecification =
+  | "superStructure" | "doorsWindows" | "wallFinishes" | "ceilingFinishes"
+  | "flooring" | "tileCladding" | "kitchen" | "bathrooms" | "electrical"
+  | "airConditioning" | "telecom" | "internet" | "lifts" | "waterTreatment"
+  | "security" | "fireSafety";
+
+export interface ProjectProfile {
+  type?: "Apartment" | "Villa" | "Plot" | "Mixed-use";
+  category?: "Residential" | "Commercial" | "Mixed";
+  launchDate?: string;
+  completionDate?: string;
+  reraCompletionDate?: string;
+  unitSizeRangeSqft?: [number, number];
+  unitFacings?: string[];
+  floorSpaceIndex?: number;
+  openAreaPercent?: number;
+  carpetAreaPercent?: number;
+  clubhouseSqft?: number;
+  ageYears?: number;
+  highlights?: string[];
+  videoUrl?: string;
+  brochureUrl?: string;
+  costSheetUrl?: string;
+  masterPlanUrl?: string;
+  floorPlans?: { configuration: string; url: string; unitSizeSqft?: number; facing?: string }[];
+  specifications?: Partial<Record<ProjectSpecification, string>>;
+  credentials?: { name: string; reference?: string; url?: string }[];
+  partners?: { name: string; role: string }[];
+  reviews?: { id: string; author: string; rating: number; text: string }[];
+  pros?: string[];
+  cons?: string[];
+  faqs?: { question: string; answer: string }[];
+}
+
 export interface Project {
+  profile?: ProjectProfile;
   id: string;
   developerId: string;
   localityId: string;

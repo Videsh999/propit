@@ -116,6 +116,8 @@ function LeadProject({
         <div className={cn(flip && "lg:order-1")}>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Tag>{projectStatusLabel(p.status)}</Tag>
+            {p.profile?.type && <Tag>{p.profile.type}</Tag>}
+            {p.profile?.category && <Tag>{p.profile.category}</Tag>}
             {p.reraVerified && <QualityBadge quality="verified" label="RERA" />}
           </div>
           <p className="eyebrow mb-2">

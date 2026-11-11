@@ -22,8 +22,10 @@ export function ProjectCard({
         sizes="(max-width: 768px) 100vw, 33vw"
       />
       <div className="mt-3.5">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Tag>{projectStatusLabel(project.status)}</Tag>
+          {project.profile?.type && <Tag>{project.profile.type}</Tag>}
+          {project.profile?.category && <Tag>{project.profile.category}</Tag>}
           {project.reraVerified && <QualityBadge quality="verified" label="RERA" />}
         </div>
         <h3 className="mt-2 text-[17px] font-medium leading-snug text-ink transition-colors group-hover:text-accent">
@@ -36,7 +38,7 @@ export function ProjectCard({
           From <span className="font-semibold">{formatPrice(project.priceMin)}</span>
           <span className="text-faint"> · {project.configurations.join(", ")}</span>
         </p>
-        <p className="tnum mt-0.5 text-[12px] text-faint">Possession {project.possessionDate}</p>
+        <p className="tnum mt-0.5 text-[12px] text-faint">Possession {project.possessionDate} · {project.landAreaAcres} acres</p>
       </div>
     </Link>
   );

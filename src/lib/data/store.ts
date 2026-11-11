@@ -89,10 +89,10 @@ function build(): Store {
 }
 
 // Survives hot reload in dev so the dataset stays stable across edits.
-const g = globalThis as unknown as { __propitStore?: Store };
+const g = globalThis as unknown as { __propitStoreV2?: Store };
 export function getStore(): Store {
-  if (!g.__propitStore) g.__propitStore = build();
-  return g.__propitStore;
+  if (!g.__propitStoreV2) g.__propitStoreV2 = build();
+  return g.__propitStoreV2;
 }
 
 /** Cells intersecting a bounds box — the index scan. */

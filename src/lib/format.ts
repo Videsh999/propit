@@ -68,10 +68,10 @@ const POSSESSION_LABELS: Record<string, string> = {
 export const possessionLabel = (t: string) => POSSESSION_LABELS[t] ?? t;
 
 const PROJECT_STATUS_LABELS: Record<string, string> = {
-  new_launch: "New launch",
+  new_launch: "Just launched",
   under_construction: "Under construction",
   ready: "Ready to move",
-  upcoming: "Upcoming",
+  upcoming: "Pre-launch",
 };
 export const projectStatusLabel = (t: string) => PROJECT_STATUS_LABELS[t] ?? t;
 

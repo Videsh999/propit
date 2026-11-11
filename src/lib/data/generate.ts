@@ -159,11 +159,13 @@ export function generate(): GeneratedData {
         towers: 2 + Math.floor(rnd() * 9),
         floors: status === "ready" ? 12 + Math.floor(rnd() * 20) : 15 + Math.floor(rnd() * 25),
         configurations: configs.length ? [...configs] : ["3 BHK"],
-        description: `${name} is a ${
-          ["contemporary", "landmark", "low-density", "amenity-led"][Math.floor(rnd() * 4)]
-        } development by ${dev.name} in ${loc.name}. ${loc.character}. The project spans ${
-          Math.round((2 + rnd() * 18) * 10) / 10
-        } acres with ${2 + Math.floor(rnd() * 9)} towers and a clubhouse-led amenity programme.`,
+        description: (() => {
+          // Preserve the seed sequence so existing project and listing URLs stay stable.
+          rnd();
+          rnd();
+          rnd();
+          return `${name} is a development by ${dev.name} in ${loc.name}. ${loc.character}.`;
+        })(),
         heroImage: heroImage(seed),
         gallery: imageSet(seed, 6).map((g) => g.url),
         amenities,
