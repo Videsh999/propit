@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
-import { ChevronDown, Bookmark, Sparkles, Inbox, SlidersHorizontal, MapPin, Search as SearchIcon } from "lucide-react";
+import { ChevronDown, Bookmark, MessageCircle, Inbox, SlidersHorizontal, MapPin, Search as SearchIcon } from "lucide-react";
 import { PropitMap } from "@/components/map/propit-map";
 import { MapCommandBar } from "@/components/map/map-command-bar";
 import { AnchorsPanel } from "@/components/anchors/anchors-panel";
@@ -185,7 +185,13 @@ export function DiscoveryView({
         zone={zone?.zone ?? null}
         onBoundsChange={setBounds}
       />
-      <MapCommandBar boundsDrifted={drifted} localities={localities} />
+      <MapCommandBar boundsDrifted={drifted} localities={localities}
+        onChangeView={isMobile ? (mode) => {
+          select(null);
+          setDetent(mode === "list" ? 2 : mode === "map" ? 0 : 1);
+        } : undefined}
+        activeView={isMobile ? (detent === 2 ? "list" : detent === 0 ? "map" : "split") : undefined}
+      />
       <AnimatePresence>{selectedLocalitySlug && <LocalityPanel />}</AnimatePresence>
       <AnimatePresence>
         <AnchorsPanel />
@@ -233,7 +239,7 @@ export function DiscoveryView({
             <SheetPill icon={SearchIcon} label={`${formatCount(data?.total ?? 0)} homes`} onClick={() => setDetent(1)} />
             <SheetPill icon={SlidersHorizontal} label="Filters" onClick={() => { setDetent(1); setFiltersOpen(true); }} />
             <SheetPill icon={MapPin} label="Anchors" onClick={() => setAnchorsOpen(true)} />
-            <SheetPill icon={Sparkles} label="Ask" onClick={() => setAssistantOpen(true)} />
+            <SheetPill icon={MessageCircle} label="Ask" onClick={() => setAssistantOpen(true)} />
           </div>
         )}
       </div>
@@ -253,7 +259,7 @@ export function DiscoveryView({
         <div
           className={cn(
             "flex min-h-0 flex-col bg-paper",
-            showMap ? "w-[420px] shrink-0" : "w-full",
+            showMap ? "w-full max-w-[420px] shrink-0" : "w-full",
           )}
         >
           {resultsHeader}
@@ -360,7 +366,7 @@ function EmptyState() {
         onClick={() => setAssistantOpen(true)}
         className="mt-5 inline-flex items-center gap-1.5 text-[13px] text-accent underline-offset-4 hover:underline"
       >
-        <Sparkles size={13} strokeWidth={1.75} />
+        <MessageCircle size={13} strokeWidth={1.75} />
         Ask PropIT what to change
       </button>
     </div>

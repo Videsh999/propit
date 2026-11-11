@@ -14,7 +14,7 @@ import {
   Target,
   X,
 } from "lucide-react";
-import { useDiscovery } from "@/store/discovery";
+import { useDiscovery, type ViewMode } from "@/store/discovery";
 import { NearbyPanel, RadiusPanel } from "@/components/map/map-toolbar";
 import type { Locality } from "@/types";
 import { cn } from "@/lib/utils";
@@ -33,9 +33,13 @@ type LocalityLite = Pick<Locality, "slug" | "name" | "center">;
 export function MapCommandBar({
   boundsDrifted,
   localities,
+  activeView,
+  onChangeView,
 }: {
   boundsDrifted: boolean;
   localities: LocalityLite[];
+  activeView?: ViewMode;
+  onChangeView?: (mode: ViewMode) => void;
 }) {
   const {
     commitBounds, radius, anchors, layers, toggleLayer,
@@ -117,12 +121,12 @@ export function MapCommandBar({
           ] as const).map(([mode, Icon, label]) => (
             <button
               key={mode}
-              onClick={() => setViewMode(mode)}
+              onClick={() => (onChangeView ?? setViewMode)(mode)}
               aria-label={label}
-              aria-pressed={viewMode === mode}
+              aria-pressed={(activeView ?? viewMode) === mode}
               className={cn(
                 "grid h-8 w-8 place-items-center rounded-full transition-colors",
-                viewMode === mode ? "bg-inverse text-[var(--ink-inverse)]" : "text-faint hover:text-ink",
+                (activeView ?? viewMode) === mode ? "bg-inverse text-[var(--ink-inverse)]" : "text-faint hover:text-ink",
               )}
             >
               <Icon size={13} strokeWidth={1.75} />
@@ -182,7 +186,7 @@ function Tool({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium transition-colors",
+        "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2 text-[12px] font-medium transition-colors sm:px-3",
         active ? "bg-accent text-[var(--accent-ink)]" : "text-muted hover:bg-sunk hover:text-ink",
       )}
     >

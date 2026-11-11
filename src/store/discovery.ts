@@ -13,6 +13,8 @@ import type {
 } from "@/types";
 import { DEFAULT_FILTERS } from "@/lib/data/filters";
 
+export const MAX_COMPARE_PROPERTIES = 4;
+
 export type ViewMode = "split" | "map" | "list";
 export type DrawMode = "none" | "circle" | "polygon" | "rectangle";
 
@@ -260,7 +262,7 @@ export const useDiscovery = create<DiscoveryState>()(
       set((s) => ({
         compareIds: s.compareIds.includes(id)
           ? s.compareIds.filter((x) => x !== id)
-          : s.compareIds.length >= 4
+          : s.compareIds.length >= MAX_COMPARE_PROPERTIES
             ? s.compareIds
             : [...s.compareIds, id],
       })),

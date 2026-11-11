@@ -3,6 +3,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { TOOL_DEFS, runTool, systemPrompt, type ClientAction, type ToolContext } from "@/lib/ai/tools";
 import { answerPropertyQuestion, fallbackConcierge } from "@/lib/ai/fallback";
 import { anchorSchema, filtersSchema } from "@/lib/api/schema";
+import { getPropertiesByIds } from "@/lib/data/repository";
+import { formatArea, formatPrice, formatRent, propertyTypeLabel } from "@/lib/format";
 import { describeSituation } from "@/lib/ai/situation";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +27,10 @@ const bodySchema = z.object({
       // What the user is currently looking at, so they never have to repeat it.
       localitySlug: z.string().max(60).nullable().default(null),
       propertyId: z.string().max(80).nullable().default(null),
+      comparisonIds: z.array(z.string().max(80)).max(4).default([]),
       resultCount: z.number().int().nonnegative().nullable().default(null),
     })
-    .default({ filters: {}, anchors: [], localitySlug: null, propertyId: null, resultCount: null }),
+    .default({ filters: {}, anchors: [], localitySlug: null, propertyId: null, comparisonIds: [], resultCount: null }),
 });
 
 function sse(controller: ReadableStreamDefaultController, event: unknown) {
@@ -61,6 +64,22 @@ export async function POST(req: Request) {
       };
 
       const last = body.messages[body.messages.length - 1];
+      if (body.context.comparisonIds.length && /\bcompar(?:e|ison|ing)\b/i.test(last.content)) {
+        const listings = getPropertiesByIds([...new Set(body.context.comparisonIds)]);
+        const details = listings.map((property) => {
+          const price = property.listingType === "buy"
+            ? formatPrice(property.price)
+            : property.rentMonthly == null ? "Rent on request" : formatRent(property.rentMonthly);
+          const area = property.propertyType === "plot" ? "plot area" : "built-up area";
+          return `· **${property.title}** · ${property.listingType === "buy" ? "For sale" : "For rent"} · ${price} · ${propertyTypeLabel(property.propertyType)} · ${formatArea(property.builtupAreaSqft)} ${area}`;
+        });
+        const text = listings.length >= 2
+          ? ["Here are the selected properties:", "", ...details].join("\n")
+          : "Add at least two available properties to the comparison.";
+        sse(controller, { type: "text", delta: text });
+        done({ mode: "comparison" });
+        return;
+      }
       const propertyAnswer = answerPropertyQuestion(last.content, ctx.propertyId);
       if (propertyAnswer) {
         sse(controller, { type: "text", delta: propertyAnswer });

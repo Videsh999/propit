@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { X, Scale, Heart, ArrowUpRight, Sparkles } from "lucide-react";
+import { X, Heart, ArrowUpRight, MessageCircle } from "lucide-react";
 import { useDiscovery } from "@/store/discovery";
+import { CompareToggle } from "@/components/compare/compare-toggle";
 import { Img } from "@/components/ui/img";
 import { QualityBadge } from "@/components/ui/badge";
 import { formatArea, formatPrice, formatPriceSqft, formatRent, propertyTypeLabel, possessionLabel } from "@/lib/format";
@@ -12,12 +13,11 @@ import { cn } from "@/lib/utils";
 
 /** Floating preview that animates out of the marker, not a modal over the page. */
 export function PropertyPreview({ className }: { className?: string } = {}) {
-  const { previewProperty, select, toggleSaved, savedIds, toggleCompare, compareIds, setAssistantOpen } = useDiscovery();
+  const { previewProperty, select, toggleSaved, savedIds, setAssistantOpen } = useDiscovery();
   if (!previewProperty) return null;
 
   const p = previewProperty;
   const isSaved = savedIds.includes(p.id);
-  const inCompare = compareIds.includes(p.id);
   const hasFit = p.fitBreakdown.length > 0;
   const fit = fitLabel(p.fitScore);
   const price = p.listingType === "rent" && p.rentMonthly ? formatRent(p.rentMonthly) : formatPrice(p.price);
@@ -100,7 +100,7 @@ export function PropertyPreview({ className }: { className?: string } = {}) {
           onClick={() => setAssistantOpen(true)}
           className="mt-3 inline-flex min-h-8 items-center gap-1.5 text-[13px] font-semibold text-accent hover:underline"
         >
-          <Sparkles size={14} /> Ask PropIT about this home
+          <MessageCircle size={14} /> Ask PropIT about this home
         </button>
         <div className="mt-2 flex items-center gap-1.5">
           <Link
@@ -109,19 +109,7 @@ export function PropertyPreview({ className }: { className?: string } = {}) {
           >
             View home <ArrowUpRight size={13} strokeWidth={2} />
           </Link>
-          <button
-            onClick={() => toggleCompare(p.id)}
-            aria-pressed={inCompare}
-            className={cn(
-              "grid h-8 w-8 place-items-center rounded-[var(--r-sm)] border transition-colors",
-              inCompare
-                ? "border-[var(--accent-line)] bg-[var(--accent-wash)] text-accent"
-                : "border-line text-faint hover:text-ink",
-            )}
-            aria-label="Compare"
-          >
-            <Scale size={14} strokeWidth={1.75} />
-          </button>
+          <CompareToggle id={p.id} compact />
           <button
             onClick={() => toggleSaved(p.id)}
             aria-pressed={isSaved}

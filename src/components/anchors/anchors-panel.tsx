@@ -50,7 +50,7 @@ export function AnchorsPanel() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: -24, opacity: 0 }}
       transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-      className="scroll-quiet absolute left-3 top-3 z-30 flex max-h-[calc(100%-24px)] w-[360px] flex-col overflow-y-auto rounded-[var(--r-lg)] border border-line bg-raised shadow-[var(--e3)]"
+      className="scroll-quiet absolute left-3 top-3 z-30 flex max-h-[calc(100%-24px)] w-[min(360px,calc(100%_-_24px))] flex-col overflow-y-auto rounded-[var(--r-lg)] border border-line bg-raised shadow-[var(--e3)]"
       aria-label="Your anchors"
     >
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-raised px-4 py-3">

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Bath, BedDouble, Car, Heart, Scale } from "lucide-react";
+import { Bath, BedDouble, Car, Heart } from "lucide-react";
+import { CompareToggle } from "@/components/compare/compare-toggle";
 import { Img } from "@/components/ui/img";
 import { QualityBadge } from "@/components/ui/badge";
 import { useDiscovery } from "@/store/discovery";
@@ -19,12 +20,11 @@ export function PropertyCard({
   localityName?: string;
   compact?: boolean;
 }) {
-  const { hover, select, hoveredPropertyId, selectedPropertyId, toggleSaved, savedIds, toggleCompare, compareIds, flyTo } =
+  const { hover, select, hoveredPropertyId, selectedPropertyId, toggleSaved, savedIds, flyTo } =
     useDiscovery();
   const isHovered = hoveredPropertyId === property.id;
   const isSelected = selectedPropertyId === property.id;
   const isSaved = savedIds.includes(property.id);
-  const inCompare = compareIds.includes(property.id);
   const hasAnchors = property.fitBreakdown.length > 0;
   const fit = fitLabel(property.fitScore);
 
@@ -46,12 +46,12 @@ export function PropertyCard({
         isSelected ? "bg-[var(--accent-wash)]" : isHovered ? "bg-sunk" : "bg-transparent",
       )}
     >
-      <div className={cn("flex gap-4", compact && "gap-3")}>
+      <div className={cn("flex gap-3 sm:gap-4", compact && "sm:gap-3")}>
         <Img
           src={property.images[0]?.url ?? ""}
           alt={property.title}
           seed={property.id}
-          className={cn("shrink-0 rounded-[var(--r-md)]", compact ? "h-20 w-24" : "h-28 w-36")}
+          className={cn("shrink-0 rounded-[var(--r-md)]", compact ? "h-20 w-20 sm:w-24" : "h-24 w-24 sm:h-28 sm:w-36")}
           sizes="160px"
         />
 
@@ -115,23 +115,8 @@ export function PropertyCard({
 
           <div className="mt-2.5 flex items-center gap-2">
             <QualityBadge quality={property.dataQuality} />
-            <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity duration-[160ms] group-hover:opacity-100 focus-within:opacity-100">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleCompare(property.id);
-                }}
-                aria-label={inCompare ? "Remove from comparison" : "Add to comparison"}
-                aria-pressed={inCompare}
-                className={cn(
-                  "grid h-7 w-7 place-items-center rounded-[var(--r-sm)] border transition-colors",
-                  inCompare
-                    ? "border-[var(--accent-line)] bg-[var(--accent-wash)] text-accent"
-                    : "border-line bg-raised text-faint hover:text-ink",
-                )}
-              >
-                <Scale size={13} strokeWidth={1.75} />
-              </button>
+            <div className="ml-auto flex items-center gap-1 ">
+              <CompareToggle id={property.id} compact />
               <button
                 onClick={(e) => {
                   e.stopPropagation();

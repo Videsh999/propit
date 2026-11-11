@@ -253,7 +253,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
 function Section({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
   return <section id={id} className="scroll-mt-3 rounded-[var(--r-lg)] border border-line bg-raised p-4 sm:p-6">
-    <h2 className="mb-4 font-[family-name:var(--font-editorial)] text-3xl leading-tight tracking-tight">{title}</h2>
+    <h2 className="mb-4 font-[family-name:var(--font-editorial)] text-[clamp(28px,4vw,38px)] leading-tight tracking-tight">{title}</h2>
     {children}
   </section>;
 }

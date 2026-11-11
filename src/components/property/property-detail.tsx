@@ -5,9 +5,10 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import {
-  BedDouble, Bath, Car, Compass, Building2, Calendar, Heart, Scale, Share2, Sparkles, ChevronRight, ChevronLeft, Check, Play, Pause,
+  BedDouble, Bath, Car, Compass, Building2, Calendar, Heart, Share2, MessageCircle, ChevronRight, ChevronLeft, Check, Play, Pause,
 } from "lucide-react";
 import { FloorPlan } from "@/components/property/floor-plan";
+import { CompareToggle } from "@/components/compare/compare-toggle";
 import { Img } from "@/components/ui/img";
 import { QualityBadge, Tag } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ export function PropertyDetail({
   similar: (Property & { localityName: string })[];
   nearby: NearbyPlace[];
 }) {
-  const { toggleSaved, savedIds, toggleCompare, compareIds, pushRecent, setAssistantOpen, setViewedProperty, anchors } =
+  const { toggleSaved, savedIds, pushRecent, setAssistantOpen, setViewedProperty, anchors } =
     useDiscovery();
   const [gallery, setGallery] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -67,7 +68,6 @@ export function PropertyDetail({
     bedrooms: property.bedrooms, type: property.propertyType,
   }], [property]);
   const isSaved = savedIds.includes(property.id);
-  const inCompare = compareIds.includes(property.id);
 
   useEffect(() => {
     pushRecent(property.id);
@@ -345,7 +345,7 @@ export function PropertyDetail({
                 className="w-full gap-1.5"
                 onClick={() => setAssistantOpen(true)}
               >
-                <Sparkles size={15} strokeWidth={1.75} />
+                <MessageCircle size={15} strokeWidth={1.75} />
                 Ask PropIT about this home
               </Button>
             </div>
@@ -362,16 +362,7 @@ export function PropertyDetail({
                 <Heart size={14} strokeWidth={1.75} fill={isSaved ? "currentColor" : "none"} />
                 {isSaved ? "Saved" : "Save"}
               </button>
-              <button
-                onClick={() => toggleCompare(property.id)}
-                className={cn(
-                  "inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[var(--r-sm)] border text-[13px] transition-colors",
-                  inCompare ? "border-[var(--accent-line)] bg-[var(--accent-wash)] text-accent" : "border-line text-muted hover:text-ink",
-                )}
-              >
-                <Scale size={14} strokeWidth={1.75} />
-                Compare
-              </button>
+              <CompareToggle id={property.id} className="h-9 flex-1" />
               <button
                 onClick={() => {
                   if (typeof navigator !== "undefined" && navigator.clipboard) {

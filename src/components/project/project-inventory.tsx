@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import { CompareToggle } from "@/components/compare/compare-toggle";
 import { Img } from "@/components/ui/img";
 import { formatArea, formatPrice, formatRent, propertyTypeLabel } from "@/lib/format";
 import type { ListingType, Property, PropertyType } from "@/types";
@@ -41,18 +42,19 @@ export function ProjectInventory({ listings }: { listings: ProjectListing[] }) {
       {results.length ? (
         <ul className="divide-y divide-line">
           {results.map((listing) => (
-            <li key={listing.id}>
-              <Link href={`/property/${listing.slug}`} className="flex items-center gap-3 py-3 hover:text-accent sm:gap-4">
-                {listing.image && <Img src={listing.image} alt="" className="h-14 w-16 shrink-0 rounded-lg sm:w-20" sizes="80px" />}
-                <span className="min-w-0 flex-1">
+            <li key={listing.id} className="flex items-center gap-2">
+              <Link href={`/property/${listing.slug}`} className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 py-3 hover:text-accent sm:flex sm:gap-4">
+                {listing.image && <Img src={listing.image} alt="" className="row-span-2 h-14 w-14 shrink-0 rounded-lg sm:w-20" sizes="80px" />}
+                <span className="col-start-2 min-w-0 flex-1">
                   <span className="block text-sm font-semibold">{listing.title}</span>
                   <span className="text-xs text-muted">{propertyTypeLabel(listing.propertyType)} · {formatArea(listing.builtupAreaSqft)}</span>
                 </span>
-                <span className="shrink-0 text-right text-xs font-semibold sm:text-sm">
+                <span className="col-start-2 shrink-0 text-xs font-semibold sm:text-right sm:text-sm">
                   {mode === "rent" ? listing.rentMonthly == null ? "On request" : formatRent(listing.rentMonthly) : formatPrice(listing.price)}
                 </span>
                 <ArrowUpRight size={15} className="hidden shrink-0 sm:block" aria-hidden="true" />
               </Link>
+              <CompareToggle id={listing.id} compact />
             </li>
           ))}
         </ul>

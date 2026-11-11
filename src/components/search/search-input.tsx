@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Search, Sparkles, MapPin, Building2, Landmark, CornerDownLeft, Loader2 } from "lucide-react";
+import { Search, MessageCircle, MapPin, Building2, Landmark, CornerDownLeft, Loader2 } from "lucide-react";
 import { useSuggest, type Suggestion } from "@/lib/hooks/use-suggest";
 import { filtersToParams, useDiscovery } from "@/store/discovery";
 import { cn } from "@/lib/utils";
@@ -241,7 +241,7 @@ export function SearchInput({
               const prev = rows[i - 1];
               const showGroup = !prev || prev.group !== row.group;
               const isAsk = row.id === "__ask";
-              const Icon = isAsk ? Sparkles : (GROUP_ICON[row.group as keyof typeof GROUP_ICON] ?? MapPin);
+              const Icon = isAsk ? MessageCircle : (GROUP_ICON[row.group as keyof typeof GROUP_ICON] ?? MapPin);
               return (
                 <div key={row.id}>
                   {showGroup && (

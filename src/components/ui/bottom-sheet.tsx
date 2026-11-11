@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, animate, type PanInfo } from "motion/react";
 import { cn } from "@/lib/utils";
 import { usePrefersReducedMotion } from "@/lib/hooks/use-media-query";
@@ -32,7 +32,13 @@ export function BottomSheet({
   const scrollRef = useRef<HTMLDivElement>(null);
   const reduce = usePrefersReducedMotion();
 
-  const topFor = useCallback((d: Detent) => vh * (1 - DETENTS[d]), [vh]);
+  useEffect(() => {
+    const resize = () => setVh(window.innerHeight);
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+
+  const topFor = useCallback((d: Detent) => Math.max(72, vh * (1 - DETENTS[d])), [vh]);
 
   // Keep the sheet anchored when the viewport resizes (rotation, keyboard).
   const measure = useCallback(
@@ -40,7 +46,7 @@ export function BottomSheet({
       if (!node) return;
       const h = window.innerHeight;
       if (h !== vh) setVh(h);
-      y.set(h * (1 - DETENTS[detent]));
+      y.set(Math.max(72, h * (1 - DETENTS[detent])));
     },
     [detent, vh, y],
   );
@@ -68,7 +74,7 @@ export function BottomSheet({
   return (
     <motion.div
       ref={measure}
-      style={{ y, height: vh }}
+      style={{ y, height: vh - topFor(detent) }}
       drag="y"
       dragConstraints={{ top: topFor(2), bottom: topFor(0) }}
       dragElastic={0.04}
@@ -85,9 +91,11 @@ export function BottomSheet({
     >
       {/* Grab handle — the whole header area is draggable */}
       <div className="shrink-0 cursor-grab touch-none active:cursor-grabbing">
-        <div className="flex justify-center pb-1 pt-2.5">
+        <button type="button" className="flex w-full justify-center pb-2 pt-2.5"
+          aria-label={detent === 2 ? "Collapse results" : "Expand results"}
+          onClick={() => onDetentChange(detent === 2 ? 1 : detent === 0 ? 1 : 2)}>
           <span className="h-1 w-9 rounded-full bg-[var(--line-strong)]" />
-        </div>
+        </button>
         {header}
       </div>
 

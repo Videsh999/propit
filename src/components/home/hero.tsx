@@ -11,6 +11,7 @@ import { LocalityPanel } from "@/components/locality/locality-panel";
 import { MapToolbar } from "@/components/map/map-toolbar";
 import { PropertyPreview } from "@/components/property/property-preview";
 import { SearchInput } from "@/components/search/search-input";
+import { CompareToggle } from "@/components/compare/compare-toggle";
 import { Img } from "@/components/ui/img";
 import { activeFilterCount } from "@/lib/data/filters";
 import { formatArea, formatCount, formatPrice, formatRent } from "@/lib/format";
@@ -174,7 +175,7 @@ export function Hero({ localities, initialResults, prime, projects }: {
 function HomeCard({ property }: { property: ScoredProperty }) {
   const price = property.listingType === "rent" && property.rentMonthly ? formatRent(property.rentMonthly) : formatPrice(property.price);
   return (
-    <article>
+    <article className="relative">
       <Link href={`/property/${property.slug}`} className={styles.card}>
         <Img src={property.images[0]?.url ?? ""} alt="" className={styles.cardImage} sizes="150px" />
         <div className={styles.cardBody}>
@@ -183,8 +184,8 @@ function HomeCard({ property }: { property: ScoredProperty }) {
           <p className={styles.address}>{property.address}</p>
           <p><BedDouble size={14} /> {property.bedrooms > 0 && `${property.bedrooms} BHK · `}{formatArea(property.builtupAreaSqft)}</p>
         </div>
-        <ArrowUpRight size={15} aria-hidden="true" className={styles.cardArrow} />
       </Link>
+      <CompareToggle id={property.id} compact className="absolute right-2 top-2" />
     </article>
   );
 }

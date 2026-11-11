@@ -25,7 +25,7 @@ export function LocalityPanel() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 32, opacity: 0 }}
       transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-      className="scroll-quiet absolute right-3 top-3 z-30 flex max-h-[calc(100%-24px)] w-[420px] flex-col overflow-y-auto rounded-[var(--r-lg)] border border-line bg-raised shadow-[var(--e3)]"
+      className="scroll-quiet absolute right-3 top-3 z-30 flex max-h-[calc(100%-24px)] w-[min(420px,calc(100%_-_24px))] flex-col overflow-y-auto rounded-[var(--r-lg)] border border-line bg-raised shadow-[var(--e3)]"
       aria-label="Locality intelligence"
     >
       <button
