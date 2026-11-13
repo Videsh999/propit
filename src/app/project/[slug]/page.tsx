@@ -10,10 +10,11 @@ import { haversineKm } from "@/lib/geo/distance";
 import { Img } from "@/components/ui/img";
 import { Tag } from "@/components/ui/badge";
 import { ProjectCard } from "@/components/cards/project-card";
+import { ProjectAmenities } from "@/components/project/project-amenities";
 import { ProjectInventory } from "@/components/project/project-inventory";
-import { AMENITIES } from "@/lib/data/developers";
-import { POI_CATEGORY_LABEL } from "@/lib/data/pois";
-import { formatArea, formatCount, formatDistance, formatPrice, projectStatusLabel } from "@/lib/format";
+import { ProjectLocation } from "@/components/project/project-location";
+import { POI_CATEGORY_SINGULAR } from "@/lib/data/pois";
+import { formatArea, formatCount, formatPrice, projectStatusLabel } from "@/lib/format";
 import type { Project, ProjectSpecification } from "@/types";
 
 const SECTIONS = [
@@ -61,7 +62,11 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   const sizes = listedHomes.map((unit) => unit.builtupAreaSqft).filter((size) => size > 0);
   const range = profile.unitSizeRangeSqft ?? (sizes.length ? [Math.min(...sizes), Math.max(...sizes)] : null);
   const sizeRange = range ? (range[0] === range[1] ? formatArea(range[0]) : `${formatCount(range[0])}–${formatArea(range[1])}`) : null;
-  const nearby = nearbyPlaces(project.location, null, 6, 2).slice(0, 8);
+  const nearby = nearbyPlaces(project.location, null, 12, 5, { verifiedOnly: true }).map(
+    ({ id, name, category, location, distanceKm, minutes }) => ({
+      id, name, category, location, distanceKm, minutes, kind: POI_CATEGORY_SINGULAR[category],
+    }),
+  );
   const projects = allProjects().filter(({ id }) => id !== project.id);
   const rankedByDistance = projects
     .map((candidate) => ({ candidate, distance: haversineKm(project.location, candidate.location) }))
@@ -75,12 +80,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
     candidate.developerId === project.developerId && !related.includes(candidate) && !similar.includes(candidate),
   ).slice(0, 4);
   const gallery = [...new Set(project.gallery)].filter((url) => url !== project.heroImage);
-  const amenities = new Map<string, string[]>();
-  for (const slug of new Set(project.amenities)) {
-    const item = AMENITIES.find((amenity) => amenity.slug === slug);
-    const category = item?.category ?? "Other amenities";
-    amenities.set(category, [...(amenities.get(category) ?? []), item?.name ?? slug]);
-  }
   const plans = new Map<string, NonNullable<typeof profile.floorPlans>>();
   for (const configuration of project.configurations) plans.set(configuration, []);
   for (const plan of profile.floorPlans ?? []) {
@@ -185,10 +184,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
           <Section id="amenities" title="Amenities & clubhouse">
             <Facts rows={[["Clubhouse size", profile.clubhouseSqft == null ? null : formatArea(profile.clubhouseSqft)]]} />
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {[...amenities].map(([category, names]) => <div key={category}><h3 className="mb-2 text-sm font-semibold">{category}</h3><TextList items={names} /></div>)}
-            </div>
-            {!amenities.size && <p className="text-sm text-muted">Amenities not supplied.</p>}
+            <ProjectAmenities amenities={project.amenities} />
           </Section>
 
           <Section id="specifications" title="Specifications">
@@ -206,9 +202,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
           <Section id="location" title={locality ? `Location · ${locality.name}` : "Location"}>
             {locality && <><p className="text-sm leading-relaxed text-muted">{locality.summary}</p><Link href={`/locality/${locality.slug}`} className="mt-2 inline-block text-sm font-semibold text-accent hover:underline">Explore {locality.name}</Link></>}
-            <h3 className="mb-2 mt-5 text-sm font-semibold">Nearby places</h3>
-            <Facts rows={nearby.map((place) => [`${place.name} · ${POI_CATEGORY_LABEL[place.category]}`, formatDistance(place.distanceKm)])} />
-            {nearby.length > 0 && <p className="mt-2 text-xs text-muted">Straight-line distances from the project.</p>}
+            <ProjectLocation name={project.name} origin={project.location} places={nearby} />
           </Section>
 
           <Section id="builder" title="Builder profile">

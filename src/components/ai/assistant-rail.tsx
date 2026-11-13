@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { MessageCircle, X, ArrowUp, Check, Loader2 } from "lucide-react";
+import { MessageCircle, X, ArrowUp, ArrowUpRight, Check, Loader2 } from "lucide-react";
 import { useDiscovery } from "@/store/discovery";
-import { useProperties } from "@/lib/hooks/use-properties";
+import type { AssistantSource } from "@/lib/ai/sources";
 import type { Anchor, PropertyFilters } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -14,13 +15,14 @@ interface Msg {
   content: string;
   statuses?: string[];
   pending?: boolean;
+  sources?: AssistantSource[];
 }
 
 const STARTERS = [
   "My office is in Financial District",
-  "3 BHK under 2 crore near Hitech City",
-  "Tell me about Tellapur",
-  "Villas within 5 km of Gachibowli",
+  "Find 3 BHK homes under ₹2 Cr in Kokapet",
+  "Compare Gachibowli and Tellapur",
+  "How do I check a project’s RERA registration?",
 ];
 
 export function AssistantRail() {
@@ -28,24 +30,29 @@ export function AssistantRail() {
     assistantOpen, setAssistantOpen, assistantDraft, setAssistantDraft, filters, anchors,
     selectedLocalitySlug, selectedPropertyId, viewedProperty, previewProperty, compareIds,
     setFilters, addAnchor, removeAnchor, clearAnchors, setRadius,
-    flyTo, select, setUseBounds, toggleLayer, toggleCompare, clearCompare,
+    flyTo, select, setUseBounds, setPolygon, setDrawMode, toggleLayer, addToCompare, clearCompare,
   } = useDiscovery();
   const pathname = usePathname();
   const activeDetail = viewedProperty && pathname === `/property/${viewedProperty.slug}` ? viewedProperty : null;
   const onDiscovery = pathname === "/" || pathname === "/search";
+  const projectSlug = pathname.match(/^\/project\/([^/]+)$/)?.[1] ?? null;
+  const localitySlug = pathname.match(/^\/locality\/([^/]+)$/)?.[1]
+    ?? (onDiscovery ? selectedLocalitySlug ?? (filters.localitySlugs.length === 1 ? filters.localitySlugs[0] : null) : null);
   const propertyId = activeDetail?.id ?? (onDiscovery ? selectedPropertyId : null);
   const propertyTitle = activeDetail?.title ?? (onDiscovery && previewProperty?.id === propertyId ? previewProperty?.title : null);
+  const activeContext = propertyTitle ?? (projectSlug ? "Project details" : localitySlug ? "Locality details" : pathname === "/compare" ? "Property comparison" : "Hyderabad property assistant");
   const propertyPrompts = ["Tell me about this property", "What does it cost?", "What amenities does it have?", "What’s nearby?"];
+  const prompts = propertyId ? propertyPrompts : projectSlug
+    ? ["Summarize this project", "What are its amenities?", "Does it have floor plans?", "Which schools are nearby?"]
+    : pathname === "/compare" && compareIds.length > 1
+      ? ["Compare my selected properties", "Which one is cheaper?"]
+      : localitySlug ? ["Tell me about this locality", "What is the average rent here?", "Which metro stations are nearby?"] : STARTERS;
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const composerValue = assistantDraft ?? input;
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const localitiesRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
-  const resultCountRef = useRef<number | null>(null);
-  // Kept in a ref so a changing count never re-renders the transcript.
-  const { data: liveResults } = useProperties({ limit: 1, enabled: assistantOpen });
-  resultCountRef.current = liveResults?.total ?? null;
 
   useEffect(() => {
     if (!assistantOpen || localitiesRef.current.size) return;
@@ -68,6 +75,13 @@ export function AssistantRail() {
         case "set_filters":
           setUseBounds(false);
           setFilters(action.payload as Partial<PropertyFilters>);
+          break;
+        case "clear_search_geometry":
+          select(null);
+          setRadius(null);
+          setPolygon(null);
+          setDrawMode("none");
+          setUseBounds(false);
           break;
         case "add_anchor":
           addAnchor(action.payload as unknown as Anchor);
@@ -107,14 +121,14 @@ export function AssistantRail() {
           break;
         case "set_compare":
           clearCompare();
-          for (const id of (action.payload.ids as string[]) ?? []) toggleCompare(id);
+          for (const id of (action.payload.ids as string[]) ?? []) addToCompare(id);
           break;
         case "toggle_layer":
           toggleLayer(action.payload.layer as never);
           break;
       }
     },
-    [setFilters, addAnchor, removeAnchor, clearAnchors, setRadius, flyTo, select, setUseBounds, toggleLayer, toggleCompare, clearCompare],
+    [setFilters, addAnchor, removeAnchor, clearAnchors, setRadius, flyTo, select, setUseBounds, setPolygon, setDrawMode, toggleLayer, addToCompare, clearCompare],
   );
 
   async function send(text: string) {
@@ -132,14 +146,14 @@ export function AssistantRail() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: history.slice(-39).map((m) => ({ role: m.role, content: m.content })),
+          messages: history.slice(-39).map((m) => ({ role: m.role, content: m.content.slice(0, 8000) })),
           context: {
             filters,
             anchors,
-            localitySlug: onDiscovery ? selectedLocalitySlug : null,
+            localitySlug,
             propertyId,
+            projectSlug,
             comparisonIds: pathname === "/compare" ? compareIds : [],
-            resultCount: resultCountRef.current,
           },
         }),
       });
@@ -159,7 +173,7 @@ export function AssistantRail() {
         for (const part of parts) {
           const line = part.trim();
           if (!line.startsWith("data:")) continue;
-          let evt: { type: string; delta?: string; text?: string; action?: { type: string; payload: Record<string, unknown> }; message?: string };
+          let evt: { type: string; delta?: string; text?: string; action?: { type: string; payload: Record<string, unknown> }; message?: string; sources?: AssistantSource[] };
           try {
             evt = JSON.parse(line.slice(5).trim());
           } catch {
@@ -178,6 +192,12 @@ export function AssistantRail() {
               const next = [...prev];
               const last = next[next.length - 1];
               next[next.length - 1] = { ...last, statuses: [...(last.statuses ?? []), evt.text!] };
+              return next;
+            });
+          } else if (evt.type === "sources" && Array.isArray(evt.sources)) {
+            setMessages((prev) => {
+              const next = [...prev];
+              next[next.length - 1] = { ...next[next.length - 1], sources: evt.sources };
               return next;
             });
           } else if (evt.type === "action" && evt.action) {
@@ -247,7 +267,7 @@ export function AssistantRail() {
               </span>
               <div className="min-w-0">
                 <h2 className="text-[14px] font-semibold text-ink">Ask PropIT</h2>
-                <p className="truncate text-[11px] text-faint">{propertyTitle ?? "Hyderabad property assistant"}</p>
+                <p className="truncate text-[11px] text-faint">{activeContext}</p>
               </div>
             </div>
             <button
@@ -268,18 +288,13 @@ export function AssistantRail() {
                     <p className="mt-3 text-[13px] leading-relaxed text-muted">Ask about the home you’re viewing, from the listed price to nearby places.</p>
                   </>
                 ) : <>
-                <p className="display text-[24px] leading-tight text-ink">
-                  Tell me where
-                  <br />
-                  your life happens.
-                </p>
+                <p className="display text-[24px] leading-tight text-ink">Explore Hyderabad real estate</p>
                 <p className="mt-3 text-[13px] leading-relaxed text-muted">
-                  I can place your office and your child&apos;s school on the map, work out the area
-                  that satisfies both, and show you what&apos;s inside it.
+                  Ask about a project, compare localities, or find homes around the places you visit.
                 </p>
                 </>}
                 <div className="mt-5 space-y-1.5">
-                  {(propertyId ? propertyPrompts : STARTERS).map((s) => (
+                  {prompts.map((s) => (
                     <button
                       key={s}
                       onClick={() => send(s)}
@@ -312,7 +327,10 @@ export function AssistantRail() {
                       </div>
                     ))}
                     {m.content ? (
-                      <AssistantText text={m.content} />
+                      <>
+                        <AssistantText text={m.content} />
+                        {m.sources?.length ? <SourceLinks sources={m.sources} /> : null}
+                      </>
                     ) : m.pending ? (
                       <div className="flex items-center gap-1.5 text-[13px] text-faint">
                         <Loader2 size={13} className="animate-spin" />
@@ -363,13 +381,28 @@ export function AssistantRail() {
               </button>
             </div>
             <p className="mt-2 px-1 text-[11px] leading-relaxed text-faint">
-              Answers use PropIT listing data. Showcase listings can include estimated figures and illustrative photos.
+              PropIT showcase prices and availability are illustrative. Official checks are linked when available.
             </p>
           </form>
         </motion.aside>
       )}
       </AnimatePresence>
     </>
+  );
+}
+
+function SourceLinks({ sources }: { sources: AssistantSource[] }) {
+  return (
+    <ul aria-label="Sources" className="mt-3 grid gap-1.5">
+      {sources.map(({ label, href, kind }) => {
+        const className = "flex min-h-9 items-center justify-between gap-2 rounded-lg border border-line bg-raised px-2.5 py-1.5 text-xs font-medium text-accent hover:border-accent";
+        const content = <><span className="min-w-0">{label}<small className="ml-1.5 text-[10px] text-muted">{kind === "official" ? "Official" : "Showcase"}</small></span><ArrowUpRight size={13} className="shrink-0" aria-hidden="true" /></>;
+        return <li key={href}>{kind === "official"
+          ? <a href={href} className={className} target="_blank" rel="noopener noreferrer">{content}</a>
+          : <Link href={href} className={className}>{content}</Link>}
+        </li>;
+      })}
+    </ul>
   );
 }
 

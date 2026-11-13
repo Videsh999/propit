@@ -8,6 +8,8 @@ export interface Situation {
   anchors: Anchor[];
   localitySlug?: string | null;
   propertyId?: string | null;
+  projectSlug?: string | null;
+  comparisonIds?: string[];
   resultCount?: number | null;
 }
 
@@ -64,6 +66,15 @@ export function describeSituation(ctx: Situation): string {
       );
     }
   }
+  if (ctx.projectSlug) {
+    const p = store.projectBySlug.get(ctx.projectSlug);
+    if (p) lines.push(`Project open: ${p.name}, slug ${p.slug}. "This project" refers to it.`);
+  }
+  const comparison = (ctx.comparisonIds ?? []).flatMap((id) => {
+    const p = store.propertyById.get(id);
+    return p ? [`${p.title} (id ${p.id})`] : [];
+  });
+  if (comparison.length) lines.push(`Selected comparison: ${comparison.join("; ")}.`);
 
   if (!lines.length) return "";
   return lines.join("\n") + "\nDo not ask them to repeat any of this.";

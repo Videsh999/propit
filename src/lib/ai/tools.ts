@@ -10,9 +10,12 @@ import {
 } from "@/lib/data/repository";
 import { getStore } from "@/lib/data/store";
 import { getGeocodingProvider } from "@/lib/providers/geocoding";
-import { getRoutingProvider } from "@/lib/providers/routing";
-import { calcEmi, formatPrice, formatPriceSqft } from "@/lib/format";
-import type { Anchor, PropertyFilters } from "@/types";
+import { HYDERABAD_MAX_BOUNDS } from "@/lib/map/viewport";
+import { calcEmi, formatPriceSqft } from "@/lib/format";
+import { filtersSchema } from "@/lib/api/schema";
+import { findLocalities, findProjects, listedPrice, listingRecord, officialGuidance, projectRecord, showcaseSource } from "./knowledge";
+import { OFFICIAL_SOURCES, SHOWCASE_NOTE, type AssistantSource } from "./sources";
+import type { Anchor, PoiCategory, PropertyFilters } from "@/types";
 
 /** A command the assistant issues to the client — this is how the AI drives the map. */
 export interface ClientAction {
@@ -23,6 +26,7 @@ export interface ClientAction {
     | "remove_anchor"
     | "clear_anchors"
     | "set_radius"
+    | "clear_search_geometry"
     | "select_property"
     | "set_compare"
     | "toggle_layer";
@@ -36,13 +40,39 @@ export interface ToolOutcome {
   actions: ClientAction[];
   /** Short human-readable status line rendered in the transcript. */
   status: string;
+  sources?: AssistantSource[];
 }
 
 export const TOOL_DEFS: Anthropic.Tool[] = [
   {
+    name: "get_listing_details",
+    description: "Read a PropIT listing by ID or slug, or omit both for the selected listing. Returns sale or rent pricing, areas, costs, amenities, and related project. Read only.",
+    input_schema: {
+      type: "object",
+      properties: { id: { type: "string" }, slug: { type: "string" } },
+    },
+  },
+  {
+    name: "find_projects",
+    description: "Find PropIT projects by exact name or slug, or list up to six projects by locality. Omit inputs for the project currently open. Includes builder, plans, costs, stages and amenities when present. Results are showcase data.",
+    input_schema: {
+      type: "object",
+      properties: { query: { type: "string" }, locality: { type: "string" } },
+    },
+  },
+  {
+    name: "official_verification_sources",
+    description: "Get official Telangana source links and guidance for verifying registration, land use, stamp duty, and land records. This does not verify an individual property.",
+    input_schema: {
+      type: "object",
+      properties: { question: { type: "string" } },
+      required: ["question"],
+    },
+  },
+  {
     name: "search_properties",
     description:
-      "Search PropIT's property inventory and update the map. Use for any request to find, show, or filter homes. Returns real counts and listings from the database.",
+      "Search PropIT's Hyderabad showcase catalog. Use for explicit requests to find or filter listings. For research without changing the map, set updateMap to false. Counts and asking prices are illustrative.",
     input_schema: {
       type: "object",
       properties: {
@@ -65,6 +95,7 @@ export const TOOL_DEFS: Anthropic.Tool[] = [
         amenities: { type: "array", items: { type: "string" } },
         nearPlace: { type: "string", description: "Place name to search around, e.g. 'Hitech City'." },
         radiusKm: { type: "number", description: "Radius around nearPlace, in km." },
+        updateMap: { type: "boolean", description: "Set false for a read-only search." },
       },
     },
   },
@@ -120,7 +151,7 @@ export const TOOL_DEFS: Anthropic.Tool[] = [
   {
     name: "get_locality_intelligence",
     description:
-      "Real statistics for one locality: pricing, inventory, yield, momentum, price history, connectivity and nearby infrastructure. Use before making any claim about an area.",
+      "Showcase statistics for a Hyderabad locality: asking prices, inventory, modelled yield and price history, and nearby mapped infrastructure. Accepts name or slug. Read only.",
     input_schema: {
       type: "object",
       properties: { slug: { type: "string", description: "Locality slug, e.g. 'kokapet'." } },
@@ -148,11 +179,10 @@ export const TOOL_DEFS: Anthropic.Tool[] = [
   },
   {
     name: "compare_properties",
-    description: "Pull full details for up to four properties by id so they can be compared side by side.",
+    description: "Read up to four listings by ID for comparison. Omit ids for the user's comparison. Set updateComparison only when explicitly asked to change the comparison.",
     input_schema: {
       type: "object",
-      properties: { ids: { type: "array", items: { type: "string" } } },
-      required: ["ids"],
+      properties: { ids: { type: "array", items: { type: "string" } }, updateComparison: { type: "boolean" } },
     },
   },
   {
@@ -177,6 +207,17 @@ export interface ToolContext {
   /** What the user currently has open, so "here" and "this one" resolve. */
   localitySlug?: string | null;
   propertyId?: string | null;
+  projectSlug?: string | null;
+  comparisonIds?: string[];
+}
+
+async function resolveHyderabadPlace(name: string) {
+  const store = getStore();
+  const locality = findLocalities(name).find((area) => name.trim().toLowerCase() === area.name.toLowerCase());
+  if (locality) return { name: locality.name, context: locality.name, location: locality.center };
+  const places = await getGeocodingProvider().search(name, store.city.center, 6);
+  const [west, south, east, north] = HYDERABAD_MAX_BOUNDS;
+  return places.find(({ location: { lat, lng } }) => lat >= south && lat <= north && lng >= west && lng <= east);
 }
 
 export async function runTool(
@@ -187,32 +228,55 @@ export async function runTool(
   const store = getStore();
 
   switch (name) {
+    case "get_listing_details": {
+      const property = typeof input.slug === "string"
+        ? store.propertyBySlug.get(input.slug)
+        : store.propertyById.get(String(input.id ?? ctx.propertyId ?? ""));
+      if (!property) return { result: { error: "No matching PropIT listing." }, actions: [], status: "" };
+      const record = listingRecord(property);
+      return { result: record, sources: [record.source], actions: [], status: "Read the selected listing" };
+    }
+
+    case "find_projects": {
+      const locality = typeof input.locality === "string" ? findLocalities(input.locality)[0] : undefined;
+      const matches = typeof input.query === "string" && input.query.trim()
+        ? findProjects(input.query)
+        : locality ? store.projects.filter((p) => p.localityId === locality.id)
+          : ctx.projectSlug && !input.locality ? [store.projectBySlug.get(ctx.projectSlug)].filter((p) => !!p) : [];
+      const records = matches.slice(0, 4).map(projectRecord);
+      return { result: records.length ? records : { error: "No matching PropIT projects. Ask for the full name or try a locality." },
+        sources: records.map((p) => p.source), actions: [], status: records.length ? "Looked up project details" : "" };
+    }
+
+    case "official_verification_sources": {
+      const answer = officialGuidance(String(input.question ?? ""));
+      return { result: answer?.text ?? "No applicable official guidance found.", sources: answer?.sources, actions: [], status: "" };
+    }
+
     case "search_properties": {
-      const nearPlace = input.nearPlace as string | undefined;
-      const radiusKm = (input.radiusKm as number | undefined) ?? null;
+      const nearPlace = typeof input.nearPlace === "string" ? input.nearPlace.trim().slice(0, 120) : undefined;
+      const radiusKm = nearPlace ? Math.max(0.5, Math.min(40, Number(input.radiusKm) || 5)) : null;
       let center = null as { lat: number; lng: number } | null;
       let targetName = "";
 
       if (nearPlace) {
-        const places = await getGeocodingProvider().search(nearPlace, store.city.center, 1);
-        if (places[0]) {
-          center = places[0].location;
-          targetName = places[0].name;
+        const place = await resolveHyderabadPlace(nearPlace);
+        if (place) {
+          center = place.location;
+          targetName = place.name;
         }
+        if (!center) return { result: { error: `I couldn’t locate “${nearPlace}” in Hyderabad. Try the full name or a nearby locality.` }, actions: [], status: "" };
       }
 
-      const filters: Partial<PropertyFilters> = {
-        ...ctx.filters,
-        ...(input.listingType ? { listingType: input.listingType as "buy" | "rent" } : {}),
-        ...(input.propertyTypes ? { propertyTypes: input.propertyTypes as never } : {}),
-        ...(input.bedrooms ? { bedrooms: input.bedrooms as number[] } : {}),
-        ...(input.priceMin != null ? { priceMin: input.priceMin as number } : {}),
-        ...(input.priceMax != null ? { priceMax: input.priceMax as number } : {}),
-        ...(input.localitySlugs ? { localitySlugs: input.localitySlugs as string[] } : {}),
-        ...(input.possession ? { possession: input.possession as never } : {}),
-        ...(input.amenities ? { amenities: input.amenities as string[] } : {}),
-      };
-      Object.assign(ctx.filters, filters);
+      const parsed = filtersSchema.partial().safeParse(input);
+      if (!parsed.success) return { result: { error: "Invalid property filters." }, actions: [], status: "" };
+      // Zod applies inner defaults even for optional keys. Keep only fields the tool sent.
+      const patch = Object.fromEntries(Object.entries(parsed.data).filter(([key]) => Object.hasOwn(input, key))) as Partial<PropertyFilters>;
+      const update = input.updateMap !== false;
+      const modeChanged = patch.listingType && patch.listingType !== (ctx.filters.listingType ?? "buy");
+      const filters = { ...ctx.filters, ...(modeChanged ? { priceMin: null, priceMax: null } : {}),
+        ...(center && !patch.localitySlugs?.length ? { localitySlugs: [] } : {}), ...patch };
+      if (update) Object.assign(ctx.filters, filters);
 
       const res = queryProperties({
         filters,
@@ -222,43 +286,49 @@ export async function runTool(
         limit: 8,
       });
 
-      const actions: ClientAction[] = [{ type: "set_filters", payload: filters }];
-      if (center && radiusKm) {
+      const actions: ClientAction[] = update ? [
+        { type: "clear_search_geometry", payload: {} },
+        { type: "set_filters", payload: filters },
+      ] : [];
+      if (update && center && radiusKm) {
         actions.push({ type: "set_radius", payload: { center, radiusKm, label: targetName } });
-      } else if (filters.localitySlugs?.length) {
+      } else if (update && filters.localitySlugs?.length) {
         actions.push({ type: "set_map_view", payload: { localitySlug: filters.localitySlugs[0] } });
       }
 
       return {
         result: {
           total: res.total,
+          dataNote: SHOWCASE_NOTE,
           searchedAround: targetName || null,
           radiusKm,
-          topResults: res.items.map((p) => ({
+          topResults: res.items.slice(0, 6).map((p) => ({
             id: p.id,
             slug: p.slug,
             title: p.title,
             locality: store.localityById.get(p.localityId)?.name,
-            price: formatPrice(p.price),
-            priceRaw: p.price,
-            pricePerSqft: formatPriceSqft(p.pricePerSqft),
+            price: listedPrice(p),
+            href: `/property/${p.slug}`,
+            listingType: p.listingType,
+            pricePerSqft: p.listingType === "buy" ? formatPriceSqft(p.pricePerSqft) : null,
             bedrooms: p.bedrooms,
             areaSqft: p.builtupAreaSqft,
             possession: p.possession,
-            verified: p.isVerified,
-            dataQuality: p.dataQuality,
             fitScore: ctx.anchors.length ? p.fitScore : null,
           })),
         },
         actions,
+        sources: res.items.slice(0, 4).map((p) => showcaseSource(p.title, `/property/${p.slug}`)),
         status: `Found ${res.total} ${res.total === 1 ? "home" : "homes"}`,
       };
     }
 
     case "add_anchor": {
-      const place = input.place as string;
-      const places = await getGeocodingProvider().search(place, store.city.center, 1);
-      if (!places[0]) {
+      if (ctx.anchors.length >= 6) return { result: { error: "Remove an anchor before adding another." }, actions: [], status: "" };
+      const place = typeof input.place === "string" ? input.place.trim().slice(0, 120) : "";
+      if (!place) return { result: { error: "A place name is required." }, actions: [], status: "" };
+      const resolved = await resolveHyderabadPlace(place);
+      if (!resolved) {
         return {
           result: { error: `Couldn't find a place called "${place}" in Hyderabad.` },
           actions: [],
@@ -267,21 +337,21 @@ export async function runTool(
       }
       const anchor: Anchor = {
         id: `anchor_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        label: input.label as string,
+        label: String(input.label ?? "Place").slice(0, 40),
         kind: (input.kind as Anchor["kind"]) ?? "other",
-        location: places[0].location,
-        address: places[0].context || places[0].name,
-        maxKm: (input.maxKm as number) ?? 5,
+        location: resolved.location,
+        address: (resolved.context || resolved.name).slice(0, 200),
+        maxKm: Math.max(0.5, Math.min(40, Number(input.maxKm) || 5)),
         weight: (input.weight as number) ?? 1,
       };
       ctx.anchors.push(anchor);
       return {
         result: {
-          added: { label: anchor.label, resolvedTo: places[0].name, maxKm: anchor.maxKm },
+          added: { label: anchor.label, resolvedTo: resolved.name, maxKm: anchor.maxKm },
           totalAnchors: ctx.anchors.length,
         },
         actions: [{ type: "add_anchor", payload: anchor as unknown as Record<string, unknown> }],
-        status: `Placed ${anchor.label} at ${places[0].name}`,
+        status: `Placed ${anchor.label} at ${resolved.name}`,
       };
     }
 
@@ -318,6 +388,7 @@ export async function runTool(
       return {
         result: {
           total: zone.total,
+          dataNote: SHOWCASE_NOTE,
           areaKm2: zone.areaKm2,
           routingIsEstimate: zone.routingIsEstimate,
           bestLocalities: zone.localityBreakdown,
@@ -330,13 +401,14 @@ export async function runTool(
             id: p.id,
             title: p.title,
             locality: store.localityById.get(p.localityId)?.name,
-            price: formatPrice(p.price),
+            price: listedPrice(p),
             fitScore: p.fitScore,
             bedrooms: p.bedrooms,
             areaSqft: p.builtupAreaSqft,
           })),
         },
         actions,
+        sources: zone.items.slice(0, 4).map((p) => showcaseSource(p.title, `/property/${p.slug}`)),
         status: `${zone.total} ${zone.total === 1 ? "home" : "homes"} in the livable zone`,
       };
     }
@@ -365,7 +437,8 @@ export async function runTool(
     }
 
     case "get_locality_intelligence": {
-      const data = localityIntelligence(input.slug as string);
+      const slug = String(input.slug ?? ctx.localitySlug ?? "");
+      const data = localityIntelligence(slug) ?? localityIntelligence(findLocalities(slug)[0]?.slug ?? "");
       if (!data) {
         return {
           result: { error: `No locality with slug "${input.slug}". Call list_localities first.` },
@@ -376,6 +449,7 @@ export async function runTool(
       return {
         result: {
           name: data.locality.name,
+          dataNote: SHOWCASE_NOTE,
           corridor: data.locality.corridor,
           character: data.locality.character,
           summary: data.locality.summary,
@@ -388,7 +462,6 @@ export async function runTool(
           momentumPct: data.stats.momentumPct,
           avgRent: data.stats.avgRent,
           priceHistory: data.priceHistory,
-          dataQuality: data.locality.dataQuality,
           connectivity: data.connectivity.map((c) => ({
             name: c.name,
             category: c.category,
@@ -400,17 +473,18 @@ export async function runTool(
             name: p.name,
             status: p.status,
             priceMin: p.priceMin,
-            reraVerified: p.reraVerified,
+            slug: p.slug,
           })),
         },
-        actions: [{ type: "set_map_view", payload: { localitySlug: data.locality.slug } }],
+        actions: [],
+        sources: [showcaseSource(data.locality.name, `/locality/${data.locality.slug}`)],
         status: `Pulled data for ${data.locality.name}`,
       };
     }
 
     case "list_localities": {
       return {
-        result: allLocalities().map((l) => ({
+        result: { dataNote: SHOWCASE_NOTE, localities: allLocalities().map((l) => ({
           slug: l.slug,
           name: l.name,
           corridor: l.corridor,
@@ -418,7 +492,7 @@ export async function runTool(
           inventory: l.inventoryCount,
           momentumPct: l.momentumPct,
           rentalYieldPct: l.rentalYieldPct,
-        })),
+        })) },
         actions: [],
         status: "",
       };
@@ -440,9 +514,17 @@ export async function runTool(
           label = p.title;
         }
       }
+      if (!center && !input.localitySlug && !input.propertyId) {
+        const property = store.propertyById.get(ctx.propertyId ?? "");
+        const project = store.projectBySlug.get(ctx.projectSlug ?? "");
+        const locality = store.localityBySlug.get(ctx.localitySlug ?? "");
+        center = property?.location ?? project?.location ?? locality?.center ?? null;
+        label = property?.title ?? project?.name ?? locality?.name ?? "";
+      }
       if (!center) return { result: { error: "Couldn't resolve that location." }, actions: [], status: "" };
-      const cats = (input.categories as string[] | undefined) ?? [];
-      const places = nearbyPlaces(center, cats.length ? (cats as never) : null, (input.radiusKm as number) ?? 6, 3);
+      const cats = Array.isArray(input.categories) ? input.categories as PoiCategory[] : [];
+      const radius = Math.max(0.5, Math.min(40, Number(input.radiusKm) || 6));
+      const places = nearbyPlaces(center, cats.length ? cats : null, radius, 3, { verifiedOnly: true }).slice(0, 12);
       return {
         result: {
           around: label,
@@ -457,35 +539,20 @@ export async function runTool(
           })),
         },
         actions: [],
+        sources: cats.includes("metro") ? [OFFICIAL_SOURCES.metro] : [],
         status: `Checked what's near ${label}`,
       };
     }
 
     case "compare_properties": {
-      const ids = (input.ids as string[]).slice(0, 4);
+      const ids = [...new Set((Array.isArray(input.ids) ? input.ids.filter((id): id is string => typeof id === "string") : ctx.comparisonIds ?? []))].slice(0, 4);
       const props = getPropertiesByIds(ids);
       if (!props.length) return { result: { error: "None of those ids exist." }, actions: [], status: "" };
+      const records = props.map(listingRecord);
       return {
-        result: props.map((p) => ({
-          id: p.id,
-          title: p.title,
-          locality: store.localityById.get(p.localityId)?.name,
-          price: p.price,
-          priceFormatted: formatPrice(p.price),
-          pricePerSqft: p.pricePerSqft,
-          areaSqft: p.builtupAreaSqft,
-          carpetSqft: p.carpetAreaSqft,
-          bedrooms: p.bedrooms,
-          bathrooms: p.bathrooms,
-          parking: p.parking,
-          possession: p.possession,
-          amenities: p.amenities,
-          maintenanceMonthly: p.maintenanceMonthly,
-          verified: p.isVerified,
-          reraNumber: p.reraNumber,
-          dataQuality: p.dataQuality,
-        })),
-        actions: [{ type: "set_compare", payload: { ids } }],
+        result: records,
+        actions: input.updateComparison === true && props.length === ids.length ? [{ type: "set_compare", payload: { ids } }] : [],
+        sources: records.map((p) => p.source),
         status: `Compared ${props.length} homes`,
       };
     }
@@ -495,6 +562,9 @@ export async function runTool(
       const downPct = (input.downPaymentPct as number) ?? 20;
       const rate = (input.ratePct as number) ?? 8.6;
       const years = (input.years as number) ?? 20;
+      if (![price, downPct, rate, years].every(Number.isFinite) || price <= 0 || downPct < 0 || downPct > 100 || rate < 0 || rate > 40 || years < 1 || years > 40) {
+        return { result: { error: "Enter a valid price, down payment, annual rate and loan term." }, actions: [], status: "" };
+      }
       const principal = price * (1 - downPct / 100);
       return {
         result: {
@@ -517,8 +587,7 @@ export async function runTool(
 }
 
 export function systemPrompt(): string {
-  const routing = getRoutingProvider();
-  return `You are PropIT's real-estate concierge for Hyderabad, India.
+  return `You are PropIT's real estate concierge for Hyderabad, India.
 
 PropIT is a map-first property discovery platform. Its signature capability is finding homes that sit between the places that matter in someone's life - their office, their child's school, their parents - rather than making them scroll a list.
 
@@ -526,15 +595,18 @@ PropIT is a map-first property discovery platform. Its signature capability is f
 
 - Every factual claim you make MUST come from a tool result in this conversation. If you have not called a tool, you do not know the answer.
 - NEVER invent or estimate a price, area, RERA number, possession date, availability, or address. If a tool did not return it, say you don't have it.
-- Tool results tag data as verified, listed, or estimated. Reflect that in your prose: "listed at Rs 1.4 Cr" for listed data, "verified" only when the tool says so.
-- ${routing.isEstimate ? "Travel times are STRAIGHT-LINE ESTIMATES, not routed times. Whenever you state a travel time, say it is estimated. Do not imply real traffic or routing data." : "Travel times come from a routing engine and may be presented as real driving times."}
+- PropIT's catalog is showcase data. Label its listings, prices, availability and locality statistics as illustrative. Never claim live market coverage, a real sale price, official approval, title status, or independently verified registration.
+- Nearby and locality tools use straight-line distances and modelled travel times. Call those estimates without traffic.
+- For RERA, land records, land use or registration use official_verification_sources. Explain how to check the source and never claim the registry has been queried for the property.
+- The app attaches source links from tool results. Do not invent URLs or cite a source you did not use.
 - You are not a financial adviser. EMI figures are illustrative. Never present a purchase as a guaranteed investment.
 - Recommendations and comparisons are your judgement - phrase them as such, not as fact.
 
 ## How to work
 
-- Act first, then explain. When someone describes what they want, call the tools to actually change the map, then tell them what you did.
-- When someone mentions where they work, study, or need to be near - call add_anchor. This is the product's core move.
+- Use get_listing_details and find_projects for follow-ups about the listing or project currently open. Use compare_properties with no ids for the current comparison.
+- Update the map or shortlist only for explicit search or action requests. For informational questions use read-only lookups.
+- When someone provides a location to anchor their search, call add_anchor. Never infer an anchor from a factual question about a locality.
 - After adding anchors, call compute_livable_zone.
 - When zero homes match, never stop at "nothing found". compute_livable_zone returns concrete relaxation options; offer the strongest one with its real number.
 - Use list_localities to find slugs. Never guess a slug.

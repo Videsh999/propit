@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Map, {
   Layer,
   Source,
   Marker,
+  Popup,
   type MapRef,
   type MapLayerMouseEvent,
   NavigationControl,
@@ -17,6 +19,7 @@ import { makePill, PILL_SPECS } from "@/lib/map/pill";
 // Side effect: repoints MapLibre at a worker URL the server can serve.
 import "@/lib/map/worker";
 import { useDiscovery } from "@/store/discovery";
+import { useShallow } from "zustand/react/shallow";
 import { circleRing, haversineKm } from "@/lib/geo/distance";
 import { formatPrice } from "@/lib/format";
 import { boundsFromPoints } from "@/lib/geo/spatial";
@@ -27,6 +30,13 @@ import { CLUSTER_MAX_ZOOM } from "@/lib/map/constants";
 import { AnchorPin } from "./anchor-pin";
 import { LocalityMarker } from "./locality-marker";
 import { cn } from "@/lib/utils";
+
+const isPropertyLayer = (id: string) => id === "property-pill" || id === "property-dot";
+const CAMERA_MS = 320;
+const EMPTY_POINTS: MapPoint[] = [];
+const EMPTY_COUNTS: MapLocalityCount[] = [];
+const EMPTY_PROJECTS: MapProject[] = [];
+const EMPTY_POIS: Poi[] = [];
 
 export interface MapPoint {
   id: string;
@@ -72,6 +82,7 @@ interface Props {
   onBoundsChange?: (b: Bounds, zoom: number) => void;
   compact?: boolean;
   scrollZoom?: boolean;
+  cooperativeGestures?: boolean;
   initialCenter?: LatLng;
   localityScope?: Pick<Locality, "boundary">;
   followDiscoveryCamera?: boolean;
@@ -116,17 +127,18 @@ const OWN_SOURCES = [
 
 export function PropitMap({
   points,
-  contextPoints = [],
-  localityCounts = [],
-  projects = [],
+  contextPoints = EMPTY_POINTS,
+  localityCounts = EMPTY_COUNTS,
+  projects = EMPTY_PROJECTS,
   localities,
-  pois = [],
+  pois = EMPTY_POIS,
   zone = null,
   className,
   interactive = true,
   onBoundsChange,
   compact = false,
   scrollZoom = !compact,
+  cooperativeGestures = false,
   initialCenter,
   localityScope,
   followDiscoveryCamera = true,
@@ -135,14 +147,19 @@ export function PropitMap({
     () => localityScope?.boundary.map(([lng, lat]) => ({ lng, lat })) ?? [],
     [localityScope],
   );
-  const openingBounds = boundsFromPoints(localityPoints);
-  const limitBounds = boundsFromPoints(localityPoints, 0.48);
+  const openingBounds = useMemo(() => boundsFromPoints(localityPoints), [localityPoints]);
+  const maxBounds = useMemo(() => {
+    const bounds = boundsFromPoints(localityPoints, 0.48);
+    return bounds ? [bounds.west, bounds.south, bounds.east, bounds.north] as typeof HYDERABAD_MAX_BOUNDS : HYDERABAD_MAX_BOUNDS;
+  }, [localityPoints]);
+  const previousScope = useRef(localityScope);
   const mapRef = useRef<MapRef | null>(null);
   const [tileError, setTileError] = useState(false);
   const webglOk = useSyncExternalStore(subscribeNever, hasWebGL, () => true);
   const [reloadKey, setReloadKey] = useState(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [ready, setReady] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   // Vertices of the shape being drawn, plus the rubber-band point under the cursor.
   const [draft, setDraft] = useState<[number, number][]>([]);
   const [hint, setHint] = useState<[number, number] | null>(null);
@@ -171,7 +188,12 @@ export function PropitMap({
     setDrawMode,
     polygon,
     setPolygon,
-  } = useDiscovery();
+  } = useDiscovery(useShallow((s) => ({
+    anchors: s.anchors, radius: s.radius, layers: s.layers,
+    selectedPropertyId: s.selectedPropertyId, hoveredPropertyId: s.hoveredPropertyId, selectedLocalitySlug: s.selectedLocalitySlug,
+    command: s.command, consumeCommand: s.consumeCommand, select: s.select, hover: s.hover, selectLocality: s.selectLocality,
+    updateAnchor: s.updateAnchor, drawMode: s.drawMode, setDrawMode: s.setDrawMode, polygon: s.polygon, setPolygon: s.setPolygon,
+  })));
 
   // ---- basemap -----------------------------------------------------------
   const sources = useMemo(() => basemapSources(), []);
@@ -201,7 +223,7 @@ export function PropitMap({
     let cancelled = false;
 
     const ac = new AbortController();
-    const timer = window.setTimeout(() => ac.abort(), 8000);
+    const timer = window.setTimeout(() => ac.abort(), 3500);
 
     loadVectorStyle(source, "light", ac.signal)
       .then((next) => {
@@ -278,7 +300,7 @@ export function PropitMap({
       }
     };
 
-    timer = window.setTimeout(check, 9000);
+    timer = window.setTimeout(check, 5000);
     return () => window.clearTimeout(timer);
   }, [source, sourceIndex, sources, reloadKey, basemapHasTiles]);
 
@@ -379,6 +401,22 @@ export function PropitMap({
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
+  // Keep the renderer and loaded tiles when the search moves to another locality.
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || previousScope.current === localityScope || initialCenter) return;
+    previousScope.current = localityScope;
+    setSelectedProjectId(null);
+    const bounds = openingBounds
+      ? [[openingBounds.west, openingBounds.south], [openingBounds.east, openingBounds.north]] as typeof INITIAL_FIT.bounds
+      : INITIAL_FIT.bounds;
+    map.stop();
+    map.fitBounds(bounds, {
+      padding: openingBounds ? 18 : INITIAL_FIT.fitBoundsOptions.padding,
+      duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : CAMERA_MS,
+    });
+  }, [localityScope, openingBounds, ready, initialCenter]);
+
   // ---- imperative camera commands ---------------------------------------
   useEffect(() => {
     if (!followDiscoveryCamera || !command || !mapRef.current) return;
@@ -392,7 +430,7 @@ export function PropitMap({
         center: [command.center.lng, command.center.lat] as [number, number],
         zoom: command.zoom ?? map.getZoom(),
         offset: [command.offsetX ?? 0, 0] as [number, number],
-        duration: reduce ? 0 : 900,
+        duration: reduce ? 0 : CAMERA_MS,
         essential: true,
       };
       if (reduce) map.jumpTo(opts);
@@ -404,7 +442,7 @@ export function PropitMap({
           [b.west, b.south],
           [b.east, b.north],
         ],
-        { padding: compact ? 40 : 96, duration: reduce ? 0 : 900 },
+        { padding: Math.min(compact ? 40 : 96, map.getContainer().clientWidth / 5, map.getContainer().clientHeight / 5), duration: reduce ? 0 : CAMERA_MS },
       );
     }
     consumeCommand();
@@ -444,7 +482,7 @@ export function PropitMap({
 
   // Below the cluster zoom the map shows named areas with their counts rather
   // than anonymous bubbles; above it, individual prices.
-  const showAreas = zoom < CLUSTER_MAX_ZOOM && localityCounts.length > 0;
+  const showAreas = !localityScope && zoom < CLUSTER_MAX_ZOOM && localityCounts.length > 0;
 
 
   /**
@@ -544,6 +582,9 @@ export function PropitMap({
     }),
     [projects],
   );
+  const selectedProject = layers.projects
+    ? projects.find(({ id }) => id === selectedProjectId)
+    : undefined;
 
   const localityGeoJson = useMemo(
     () => ({
@@ -780,17 +821,19 @@ export function PropitMap({
         return;
       }
 
-      const f = e.features?.[0];
+      const f = e.features?.find(({ layer }) => isPropertyLayer(layer.id)) ?? e.features?.[0];
+      setSelectedProjectId(f?.layer.id === "project-dot" ? f.properties?.id as string : null);
       if (!f) return;
-      if (f.layer.id === "property-pill" || f.layer.id === "property-dot") {
+      if (isPropertyLayer(f.layer.id)) {
         select(f.properties?.id as string);
       } else if (f.layer.id === "project-dot") {
+        select(null);
         const map = mapRef.current?.getMap();
         if (map) {
           map.easeTo({
             center: (f.geometry as GeoJSON.Point).coordinates as [number, number],
             zoom: Math.max(map.getZoom(), 14.5),
-            duration: 700,
+            duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : CAMERA_MS,
           });
         }
       } else if (f.layer.id === "locality-fill") {
@@ -805,14 +848,14 @@ export function PropitMap({
     if (!map) return;
     const nextZoom = map.getZoom();
     setZoom(nextZoom);
-    placeAreas(localityCounts, nextZoom < CLUSTER_MAX_ZOOM && localityCounts.length > 0);
+    placeAreas(localityCounts, !localityScope && nextZoom < CLUSTER_MAX_ZOOM && localityCounts.length > 0);
     if (!onBoundsChange) return;
     const b = map.getBounds();
     onBoundsChange(
       { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() },
       map.getZoom(),
     );
-  }, [onBoundsChange, placeAreas, localityCounts]);
+  }, [onBoundsChange, placeAreas, localityCounts, localityScope]);
 
   const [cursor, setCursor] = useState("grab");
 
@@ -826,7 +869,7 @@ export function PropitMap({
           : openingBounds
             ? { bounds: [[openingBounds.west, openingBounds.south], [openingBounds.east, openingBounds.north]], fitBoundsOptions: { padding: 18 } }
             : INITIAL_FIT}
-        maxBounds={limitBounds ? [limitBounds.west, limitBounds.south, limitBounds.east, limitBounds.north] : HYDERABAD_MAX_BOUNDS}
+        maxBounds={maxBounds}
         onError={(e) => {
           if (process.env.NODE_ENV === "development") console.warn("[map]", e.error?.message);
         }}
@@ -864,8 +907,8 @@ export function PropitMap({
             setCursor("crosshair");
             return;
           }
-          const f = e.features?.[0];
-          if (f?.layer.id === "property-pill" || f?.layer.id === "property-dot") {
+          const f = e.features?.find(({ layer }) => isPropertyLayer(layer.id)) ?? e.features?.[0];
+          if (f && isPropertyLayer(f.layer.id)) {
             hover(f.properties?.id as string);
             setCursor("pointer");
           } else if (f) {
@@ -888,6 +931,7 @@ export function PropitMap({
         maxZoom={MAX_ZOOM}
         minZoom={MIN_ZOOM}
         scrollZoom={scrollZoom}
+        cooperativeGestures={cooperativeGestures}
         dragRotate={false}
         touchPitch={false}
         style={{ width: "100%", height: "100%" }}
@@ -1199,7 +1243,7 @@ export function PropitMap({
               onClick={() => {
                 selectLocality(l.slug);
                 const map = mapRef.current?.getMap();
-                map?.easeTo({ center: [l.lng, l.lat], zoom: 13.2, duration: 800 });
+                map?.easeTo({ center: [l.lng, l.lat], zoom: 13.2, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : CAMERA_MS });
               }}
             />
           </Marker>
@@ -1223,6 +1267,24 @@ export function PropitMap({
 
         {interactive && (
           <NavigationControl position="top-right" showCompass={false} visualizePitch={false} />
+        )}
+        {selectedProject && !selectedPropertyId && !selectedLocalitySlug && drawMode === "none" && (
+          <Popup
+            longitude={selectedProject.lng}
+            latitude={selectedProject.lat}
+            offset={10}
+            maxWidth="min(250px, 75vw)"
+            closeOnClick={false}
+            onClose={() => setSelectedProjectId(null)}
+          >
+            <div className="max-w-52 p-2 pr-5">
+              <p className="text-sm font-semibold text-ink">{selectedProject.name}</p>
+              <p className="mb-1 text-xs text-muted">From {formatPrice(selectedProject.priceMin)}</p>
+              <Link className="text-xs font-semibold text-accent underline underline-offset-2" href={`/project/${selectedProject.slug}`}>
+                View project
+              </Link>
+            </div>
+          </Popup>
         )}
       </Map>
 

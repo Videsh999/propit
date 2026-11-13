@@ -6,6 +6,8 @@ import type { Property } from "@/types";
 import { runTool, type ClientAction, type ToolContext } from "./tools";
 import { bhkLabel, formatArea, formatDistance, formatPrice, formatPriceSqft, formatRent, furnishingLabel, possessionLabel, propertyTypeLabel } from "@/lib/format";
 import { localityIntelligence, nearbyPlaces } from "@/lib/data/repository";
+import { findLocalities, lookupKnowledge, showcaseSource } from "./knowledge";
+import { OFFICIAL_SOURCES, SHOWCASE_NOTE, type AssistantSource } from "./sources";
 
 /**
  * Deterministic concierge used when no LLM key is configured.
@@ -17,9 +19,11 @@ import { localityIntelligence, nearbyPlaces } from "@/lib/data/repository";
 export async function fallbackConcierge(
   message: string,
   ctx: ToolContext,
-): Promise<{ text: string; actions: ClientAction[]; statuses: string[] }> {
+): Promise<{ text: string; actions: ClientAction[]; statuses: string[]; sources?: AssistantSource[] }> {
+  const knowledge = lookupKnowledge(message, ctx);
+  if (knowledge) return { ...knowledge, actions: [], statuses: [] };
   const propertyAnswer = answerPropertyQuestion(message, ctx.propertyId);
-  if (propertyAnswer) return { text: propertyAnswer, actions: [], statuses: [] };
+  if (propertyAnswer) return { ...propertyAnswer, actions: [], statuses: [] };
 
   const store = getStore();
   const parsed = parseQuery(
@@ -29,6 +33,9 @@ export async function fallbackConcierge(
   const actions: ClientAction[] = [];
   const statuses: string[] = [];
   const lines: string[] = [];
+  const matchedLocalities = findLocalities(message);
+  const explicitSearch = /\b(?:find|show|search|looking for|switch to|only|under|below|budget)\b/i.test(message);
+  const hasSearchCriteria = explicitSearch || Object.keys(parsed.filters).length > 0;
 
   // --- anchor intent: "my office is in X", "school near Y" ---
   const anchorPatterns: { re: RegExp; kind: "office" | "school" | "family" | "gym"; label: string }[] = [
@@ -38,10 +45,13 @@ export async function fallbackConcierge(
     { re: /\b(?:parents|family)\s+(?:live\s+)?(?:in|at|near)\s+([a-z][a-z0-9'.\- ]{2,40})/i, kind: "family", label: "Family" },
   ];
 
-  let addedAnchor = false;
+  let anchorRequested = false;
+  const handledAnchors = new Set<string>();
   for (const p of anchorPatterns) {
     const m = message.match(p.re);
-    if (!m) continue;
+    if (!m || handledAnchors.has(p.kind)) continue;
+    handledAnchors.add(p.kind);
+    anchorRequested = true;
     const place = m[1].trim().replace(/\s+(and|with|,).*$/i, "");
     const out = await runTool(
       "add_anchor",
@@ -52,7 +62,6 @@ export async function fallbackConcierge(
     if (out.status) statuses.push(out.status);
     const r = out.result as { added?: { resolvedTo: string; maxKm: number }; error?: string };
     if (r.added) {
-      addedAnchor = true;
       lines.push(`Placed **${p.label}** at ${r.added.resolvedTo}, within ${r.added.maxKm} km.`);
     } else if (r.error) {
       lines.push(r.error);
@@ -62,15 +71,14 @@ export async function fallbackConcierge(
   // --- locality question ---
   // "tell me about here" should work when a locality is already open.
   const mentionedLocality =
-    parsed.localityMentions[0] ??
+    matchedLocalities[0]?.name ??
     (parsed.isQuestion && ctx.localitySlug
       ? store.localityBySlug.get(ctx.localitySlug)?.name
       : undefined);
-  if (parsed.isQuestion && mentionedLocality) {
+  if (parsed.isQuestion && mentionedLocality && !hasSearchCriteria && !anchorRequested) {
     const l = store.localities.find((x) => x.name === mentionedLocality)!;
     const intel = localityIntelligence(l.slug);
     if (intel) {
-      actions.push({ type: "set_map_view", payload: { localitySlug: l.slug } });
       statuses.push(`Pulled data for ${l.name}`);
       lines.push(
         `**${l.name}** — ${l.character}.`,
@@ -93,12 +101,13 @@ export async function fallbackConcierge(
             ".",
         );
       }
-      return { text: lines.join("\n"), actions, statuses };
+      return { text: [...lines, "", SHOWCASE_NOTE].join("\n"), actions, statuses, sources: [showcaseSource(l.name, "/locality/" + l.slug)] };
     }
   }
 
   // --- zone recompute when anchors exist ---
-  if (addedAnchor || ctx.anchors.length) {
+  if (anchorRequested || (ctx.anchors.length && /\b(?:livable zone|anchors|prioriti[sz]e|between my)\b/i.test(message))) {
+    if (!ctx.anchors.length) return { text: lines.join("\n") || "Add an office or school to start a commute search.", actions, statuses };
     const prioritise = message.match(/priorit\w*\s+(?:my\s+)?(\w+)/i)?.[1];
     const out = await runTool("compute_livable_zone", prioritise ? { prioritise } : {}, ctx);
     actions.push(...out.actions);
@@ -135,24 +144,19 @@ export async function fallbackConcierge(
     } else {
       lines.push("", "Nothing matches every constraint, and I couldn't find a small change that would help. Try widening a distance or the budget.");
     }
-    return { text: lines.join("\n"), actions, statuses };
+    return { text: [...lines, "", SHOWCASE_NOTE].join("\n"), actions, statuses, sources: out.sources };
   }
 
   // --- plain search ---
-  if (parsed.confidence >= 0.2) {
+  if (hasSearchCriteria || (!parsed.isQuestion && (parsed.confidence >= 0.2 || matchedLocalities.length))) {
     const out = await runTool(
       "search_properties",
       {
         ...parsed.filters,
-        ...(parsed.localityMentions.length
-          ? {
-              localitySlugs: parsed.localityMentions
-                .map((n) => store.localities.find((l) => l.name === n)?.slug)
-                .filter(Boolean),
-            }
-          : {}),
+        ...(matchedLocalities.length && !parsed.nearPlace ? { localitySlugs: matchedLocalities.map((l) => l.slug) } : {}),
         ...(parsed.nearPlace ? { nearPlace: parsed.nearPlace } : {}),
         ...(parsed.radiusKm ? { radiusKm: parsed.radiusKm } : {}),
+        updateMap: explicitSearch || !parsed.isQuestion,
       },
       ctx,
     );
@@ -161,9 +165,11 @@ export async function fallbackConcierge(
     const r = out.result as {
       total: number;
       searchedAround: string | null;
+      error?: string;
       topResults: { title: string; locality: string; price: string; areaSqft: number }[];
     };
 
+    if (r.error) return { text: r.error, actions, statuses };
     if (r.total === 0) {
       lines.push(
         "Nothing matched that exactly. Try widening the budget or the area — tell me which you'd rather move and I'll adjust the map.",
@@ -172,7 +178,7 @@ export async function fallbackConcierge(
       lines.push(
         `**${r.total} ${r.total === 1 ? "home" : "homes"}** match${r.total === 1 ? "es" : ""}${
           r.searchedAround ? ` around ${r.searchedAround}` : ""
-        }. The map is showing them now.`,
+        } in PropIT’s showcase catalog.`,
       );
       if (r.topResults.length) {
         lines.push(
@@ -182,7 +188,7 @@ export async function fallbackConcierge(
       }
       lines.push("", "Want me to narrow this by distance from somewhere that matters to you?");
     }
-    return { text: lines.join("\n"), actions, statuses };
+    return { text: [...lines, "", SHOWCASE_NOTE].join("\n"), actions, statuses, sources: out.sources };
   }
 
   // --- nothing actionable ---
@@ -195,7 +201,7 @@ export async function fallbackConcierge(
       "· “Tell me about Tellapur”",
       "· “Villas within 5 km of Gachibowli”",
       "",
-      "_Full conversational answers need an Anthropic API key. Without one, I still run the real searches — I'm just more literal about it._",
+      "I can also look up a PropIT project, compare two localities, or show where to check TG RERA and land records.",
     ].join("\n"),
     actions,
     statuses,
@@ -206,16 +212,20 @@ export async function fallbackConcierge(
 function asksAboutProperty(message: string, mentionsLocality: boolean): boolean {
   if (/\b(?:this|current|selected) (?:property|listing|home|apartment|villa)\b/i.test(message)) return true;
   if (mentionsLocality || /\b(?:find|show me|search|compare|under|within|looking for|my office|my school)\b/i.test(message)) return false;
-  return /\b(?:it|its|price|cost|amenities|nearby|maintenance|deposit|ready|rera|parking|possession|bedrooms?|bathrooms?|furnish\w*|carpet area|built.up area|super area|floor|facing|size)\b/i.test(message);
+  return /\b(?:it|its|price|cost|amenities|nearby|metro|schools?|hospitals?|maintenance|deposit|ready|parking|possession|bedrooms?|bathrooms?|furnish\w*|carpet area|built.up area|super area|floors?|facing|size)\b/i.test(message);
 }
 
-export function answerPropertyQuestion(question: string, propertyId: string | null | undefined): string | null {
+export function answerPropertyQuestion(question: string, propertyId: string | null | undefined): { text: string; sources: AssistantSource[] } | null {
   if (!propertyId) return null;
   const store = getStore();
   const property = store.propertyById.get(propertyId);
   const normalized = question.toLowerCase();
   const mentionsLocality = store.localities.some(({ name }) => normalized.includes(name.toLowerCase()));
-  return property && asksAboutProperty(question, mentionsLocality) ? describeProperty(property, question) : null;
+  if (!property || !asksAboutProperty(question, mentionsLocality)) return null;
+  return {
+    text: describeProperty(property, question),
+    sources: [showcaseSource(property.title, "/property/" + property.slug), ...(/\bmetro\b/i.test(question) ? [OFFICIAL_SOURCES.metro] : [])],
+  };
 }
 
 function describeProperty(property: Property, question: string): string {
@@ -226,10 +236,19 @@ function describeProperty(property: Property, question: string): string {
     : formatPrice(property.price);
   const amenities = property.amenities.map((slug) => AMENITIES.find((amenity) => amenity.slug === slug)?.name ?? slug);
   const lines = [`**${property.title}**`, property.address];
+  if (/\b(?:floor plan|brochure|cost sheet|specifications)\b/i.test(question)) {
+    lines.push(property.floorPlanUrl ? "A floor plan is listed on the property page." : "This listing has no floor plan on file.");
+    if (project) lines.push(`The linked development is ${project.name}. Open its project page for any documents the catalog contains.`);
+    return [...lines, "", SHOWCASE_NOTE].join("\n");
+  }
   const locationQuestion = /\b(?:nearby|metro|schools?|hospitals?|parks?|commute|distance|surroundings)\b/i.test(question);
 
   if (locationQuestion) {
-    const places = nearbyPlaces(property.location, ["school", "hospital", "metro", "office_hub", "mall", "park"], 6, 1)
+    const categories = /\bmetro\b/i.test(question) ? ["metro"] as const
+      : /\bschools?\b/i.test(question) ? ["school"] as const
+        : /\bhospitals?\b/i.test(question) ? ["hospital"] as const
+          : ["school", "hospital", "metro", "office_hub", "mall", "park"] as const;
+    const places = nearbyPlaces(property.location, [...categories], 6, 1, { verifiedOnly: true })
       .sort((a, b) => a.distanceKm - b.distanceKm);
     lines.push("", places.length ? "Nearby places by straight-line distance" : "The listing has no mapped places in these categories within 6 km.");
     for (const place of places) lines.push(`· ${place.name} · ${formatDistance(place.distanceKm)}`);
@@ -253,12 +272,8 @@ function describeProperty(property: Property, question: string): string {
       if (property.facing) lines.push(`· **Facing** ${property.facing}`);
       lines.push(`· **Parking spaces** ${property.parking}`);
     }
-    if (property.reraNumber) lines.push(`· **RERA number in listing** ${property.reraNumber}`);
-    else if (/\brera\b/i.test(question)) lines.push("· **RERA number** Unavailable in the listing");
     lines.push("", amenities.length ? `**Listed amenities** ${amenities.join(", ")}.` : "The listing has no amenity details.");
   }
-  lines.push("", property.dataQuality === "estimated"
-    ? "_This listing contains estimated figures._"
-    : "_Details are from the PropIT listing._");
+  lines.push("", SHOWCASE_NOTE);
   return lines.join("\n");
 }

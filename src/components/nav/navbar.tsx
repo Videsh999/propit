@@ -66,15 +66,16 @@ export function Navbar() {
             </kbd>
           </button>
 
-          {(compareCount > 0 || pathname === "/compare") && (
-            <Link href="/compare" aria-current={pathname === "/compare" ? "page" : undefined}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-accent-wash px-2.5 text-sm font-semibold text-accent"
-              aria-label={`Open comparison, ${compareCount} selected`}>
-              <Scale size={15} aria-hidden="true" />
-              <span className="hidden xl:inline">Compare</span>
-              <span>{compareCount}</span>
-            </Link>
-          )}
+          <Link href="/compare" aria-current={pathname === "/compare" ? "page" : undefined}
+            className={cn(
+              "inline-flex h-9 items-center gap-1.5 rounded-full border border-line px-2.5 text-sm font-semibold hover:border-line-strong",
+              compareCount > 0 || pathname === "/compare" ? "bg-accent-wash text-accent" : "bg-raised text-muted",
+            )}
+            aria-label={`Open comparison, ${compareCount} selected`}>
+            <Scale size={15} aria-hidden="true" />
+            <span className="hidden xl:inline">Compare</span>
+            {compareCount > 0 && <span>{compareCount}</span>}
+          </Link>
 
           <Link
             href="/profile"

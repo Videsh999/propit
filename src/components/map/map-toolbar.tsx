@@ -8,12 +8,14 @@ import {
   Dumbbell,
   GraduationCap,
   Layers,
+  MapPin,
   Pencil,
   Plane,
   Radius as RadiusIcon,
   RefreshCw,
   Square,
   ShoppingBag,
+  SquareStack,
   Stethoscope,
   Trees,
   TramFront,
@@ -59,7 +61,7 @@ const DRAW_SHAPES: { mode: Exclude<DrawMode, "none">; icon: typeof Circle; label
   { mode: "polygon", icon: Pencil, label: "Shape", hint: "Click corners, then close it." },
 ];
 
-type Panel = "radius" | "draw" | "nearby" | null;
+type Panel = "radius" | "draw" | "nearby" | "layers" | null;
 
 /**
  * The map's own controls.
@@ -74,6 +76,10 @@ export function MapToolbar({ localities }: { localities: LocalityLite[] }) {
   const polygon = useDiscovery((s) => s.polygon);
   const drawMode = useDiscovery((s) => s.drawMode);
   const layers = useDiscovery((s) => s.layers);
+  const toggleLayer = useDiscovery((s) => s.toggleLayer);
+  const anchors = useDiscovery((s) => s.anchors);
+  const anchorsOpen = useDiscovery((s) => s.anchorsOpen);
+  const setAnchorsOpen = useDiscovery((s) => s.setAnchorsOpen);
   const drifted = useBoundsDrift();
   const commitBounds = useDiscovery((s) => s.commitBounds);
   const ref = useRef<HTMLDivElement>(null);
@@ -101,25 +107,8 @@ export function MapToolbar({ localities }: { localities: LocalityLite[] }) {
   const toggle = (next: Exclude<Panel, null>) => setPanel((p) => (p === next ? null : next));
 
   return (
-    <div ref={ref} className="pointer-events-none absolute left-3 top-3 z-20 md:left-4 md:top-4">
-      <div className="pointer-events-auto inline-flex items-center gap-0.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--paper-raised)_92%,transparent)] p-1 shadow-[var(--e2)] backdrop-blur-xl">
-        {/* Only offered once the user has actually gone somewhere else — an
-            always-present "search here" button asks a question nobody had. */}
-        <AnimatePresence>
-          {drifted && (
-            <motion.button
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              onClick={commitBounds}
-              className="inline-flex h-10 shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full bg-accent px-3.5 text-[13px] font-medium text-[var(--accent-ink)] sm:h-8 sm:px-3"
-            >
-              <RefreshCw size={13} strokeWidth={2} />
-              Search this area
-            </motion.button>
-          )}
-        </AnimatePresence>
+    <div ref={ref} className="pointer-events-none relative">
+      <div className="pointer-events-auto inline-flex max-w-full items-center gap-0.5 rounded-xl border border-line bg-[color-mix(in_srgb,var(--paper-raised)_96%,transparent)] p-1 shadow-[var(--e2)] backdrop-blur-xl" role="group" aria-label="Map tools">
         <Tool
           icon={RadiusIcon}
           label="Radius"
@@ -141,15 +130,41 @@ export function MapToolbar({ localities }: { localities: LocalityLite[] }) {
           }}
         />
         <Tool
+          icon={MapPin}
+          label="Anchors"
+          active={anchorsOpen}
+          badge={anchors.length || undefined}
+          onClick={() => { setPanel(null); setAnchorsOpen(!anchorsOpen); }}
+        />
+        <Tool
           icon={Layers}
           label="Nearby"
           active={panel === "nearby" || activeNearby > 0}
           badge={activeNearby || undefined}
           onClick={() => toggle("nearby")}
         />
+        <Tool
+          icon={SquareStack}
+          label="Layers"
+          active={panel === "layers" || layers.priceHeat}
+          onClick={() => toggle("layers")}
+        />
       </div>
 
       <AnimatePresence>
+        {!panel && drifted && (
+          <motion.button
+            key="search-area"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            onClick={commitBounds}
+            className="pointer-events-auto absolute left-0 top-full mt-2 inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-accent px-3 text-[12px] font-semibold text-[var(--accent-ink)] shadow-[var(--e2)]"
+          >
+            <RefreshCw size={13} strokeWidth={2} />
+            Search this area
+          </motion.button>
+        )}
         {panel === "radius" && (
           <Panel key="radius" onClose={() => setPanel(null)}>
             <RadiusPanel localities={localities} />
@@ -163,6 +178,32 @@ export function MapToolbar({ localities }: { localities: LocalityLite[] }) {
         {panel === "nearby" && (
           <Panel key="nearby" onClose={() => setPanel(null)}>
             <NearbyPanel />
+          </Panel>
+        )}
+        {panel === "layers" && (
+          <Panel key="layers" onClose={() => setPanel(null)}>
+            <p className="eyebrow mb-3">Map layers</p>
+            <div className="grid gap-1.5">
+              {([
+                ["localities", "Locality boundaries"],
+                ["projects", "Project locations"],
+                ["priceHeat", "Locality price heatmap"],
+              ] as const).map(([layer, label]) => (
+                <label key={layer} className="flex min-h-9 items-center justify-between gap-2 rounded-lg border border-line px-3 text-[13px] text-ink">
+                  {label}
+                  <input
+                    type="checkbox"
+                    checked={layers[layer]}
+                    onChange={() => {
+                      if (layer === "priceHeat" && !layers.priceHeat && !layers.localities) toggleLayer("localities");
+                      if (layer === "localities" && layers.localities && layers.priceHeat) toggleLayer("priceHeat");
+                      toggleLayer(layer);
+                    }}
+                    className="size-4 accent-accent"
+                  />
+                </label>
+              ))}
+            </div>
           </Panel>
         )}
       </AnimatePresence>
@@ -430,16 +471,17 @@ function Tool({
   return (
     <button
       onClick={onClick}
+      aria-label={label}
       aria-pressed={active}
       className={cn(
-        "inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium transition-colors duration-[160ms] sm:h-8 sm:px-3",
+        "inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg px-2 text-[12px] font-medium transition-colors duration-[160ms] sm:px-2.5",
         active
           ? "bg-accent text-[var(--accent-ink)]"
           : "text-muted hover:bg-sunk hover:text-ink",
       )}
     >
       <Icon size={14} strokeWidth={1.75} />
-      <span>{label}</span>
+      <span className="hidden min-[390px]:inline">{label}</span>
       {badge ? <span className="tnum text-[11px] opacity-75">{badge}</span> : null}
     </button>
   );
@@ -452,7 +494,7 @@ function Panel({ children, onClose }: { children: React.ReactNode; onClose: () =
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
       transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-      className="pointer-events-auto relative mt-2 w-[min(84vw,330px)] rounded-[var(--r-md)] border border-line bg-raised p-4 shadow-[var(--e3)]"
+      className="pointer-events-auto absolute left-0 top-full mt-2 max-h-[min(50svh,420px)] w-[min(84vw,330px)] overflow-y-auto rounded-[var(--r-md)] border border-line bg-raised p-4 shadow-[var(--e3)]"
     >
       <button
         onClick={onClose}

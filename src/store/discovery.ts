@@ -107,6 +107,7 @@ interface DiscoveryState {
   selectLocality: (slug: string | null) => void;
 
   toggleCompare: (id: string) => void;
+  addToCompare: (id: string) => void;
   clearCompare: () => void;
   toggleSaved: (id: string) => void;
   pushRecent: (id: string) => void;
@@ -255,7 +256,9 @@ export const useDiscovery = create<DiscoveryState>()(
 
     select: (id, property) =>
       set({ selectedPropertyId: id, previewProperty: property ?? null, selectedLocalitySlug: null }),
-    hover: (id) => set({ hoveredPropertyId: id }),
+    hover: (id) => {
+      if (get().hoveredPropertyId !== id) set({ hoveredPropertyId: id });
+    },
     selectLocality: (slug) => set({ selectedLocalitySlug: slug, selectedPropertyId: null, previewProperty: null }),
 
     toggleCompare: (id) =>
@@ -266,6 +269,11 @@ export const useDiscovery = create<DiscoveryState>()(
             ? s.compareIds
             : [...s.compareIds, id],
       })),
+    addToCompare: (id) => set((s) =>
+      s.compareIds.includes(id) || s.compareIds.length >= MAX_COMPARE_PROPERTIES
+        ? s
+        : { compareIds: [...s.compareIds, id] },
+    ),
     clearCompare: () => set({ compareIds: [] }),
     toggleSaved: (id) =>
       set((s) => ({

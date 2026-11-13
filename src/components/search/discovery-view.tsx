@@ -46,7 +46,7 @@ export function DiscoveryView({
 }) {
   const {
     setBounds, viewMode, anchors, filters, select,
-    selectedLocalitySlug, previewProperty, saveSearch, savedSearches,
+    selectedLocalitySlug, selectedPropertyId, saveSearch, savedSearches,
     radius, setRadius, sort, setSort, setFiltersOpen, setAnchorsOpen, setAssistantOpen,
   } = useDiscovery();
 
@@ -68,7 +68,7 @@ export function DiscoveryView({
   );
 
   const drifted = useBoundsDrift();
-  useSelectedProperty();
+  const preview = useSelectedProperty(isPlaceholderData ? undefined : data?.items);
 
   // Scroll the list back to the top whenever the query changes materially.
   useEffect(() => {
@@ -174,7 +174,6 @@ export function DiscoveryView({
   const mapPane = (
     <>
       <PropitMap
-        key={focusedLocality?.slug ?? "hyderabad"}
         localityScope={focusedLocality}
         points={data?.points ?? []}
         contextPoints={data?.contextPoints ?? []}
@@ -196,7 +195,9 @@ export function DiscoveryView({
       <AnimatePresence>
         <AnchorsPanel />
       </AnimatePresence>
-      <AnimatePresence>{!isMobile && previewProperty && <PropertyPreview />}</AnimatePresence>
+      <AnimatePresence>{!isMobile && selectedPropertyId && (
+        <PropertyPreview key={selectedPropertyId} error={preview.isError} onRetry={() => void preview.refetch()} />
+      )}</AnimatePresence>
 
       {radius && (
         <div className="pointer-events-auto absolute bottom-3 right-3 z-20 flex items-center gap-2 rounded-full border border-line bg-[color-mix(in_srgb,var(--paper-raised)_90%,transparent)] px-3 py-1.5 text-[12px] shadow-[var(--e1)] backdrop-blur">
@@ -221,12 +222,13 @@ export function DiscoveryView({
         {mapPane}
 
         <AnimatePresence>
-          {previewProperty && <PropertyPreview className="fixed bottom-[calc(12vh+12px)] z-[41] max-h-[calc(88vh-96px)]" />}
+          {selectedPropertyId && <PropertyPreview key={selectedPropertyId} error={preview.isError} onRetry={() => void preview.refetch()}
+            className="fixed bottom-[calc(12vh+12px)] z-[41] max-h-[calc(88vh-96px)]" />}
         </AnimatePresence>
         <BottomSheet
-          detent={previewProperty ? 0 : detent}
+          detent={selectedPropertyId ? 0 : detent}
           onDetentChange={(next) => {
-            if (next !== 0 && previewProperty) select(null);
+            if (next !== 0 && selectedPropertyId) select(null);
             setDetent(next);
           }}
           header={resultsHeader}
@@ -234,7 +236,7 @@ export function DiscoveryView({
           {resultsList}
         </BottomSheet>
 
-        {detent === 0 && !previewProperty && (
+        {detent === 0 && !selectedPropertyId && (
           <div className="pointer-events-none absolute inset-x-0 bottom-[calc(12svh+12px)] z-30 flex justify-center gap-1.5 px-3">
             <SheetPill icon={SearchIcon} label={`${formatCount(data?.total ?? 0)} homes`} onClick={() => setDetent(1)} />
             <SheetPill icon={SlidersHorizontal} label="Filters" onClick={() => { setDetent(1); setFiltersOpen(true); }} />

@@ -24,7 +24,7 @@ export interface ParsedHint {
   isQuestion: boolean;
 }
 
-export function useDebounced<T>(value: T, ms = 180): T {
+export function useDebounced<T>(value: T, ms = 100): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
     const t = setTimeout(() => setDebounced(value), ms);
@@ -34,7 +34,7 @@ export function useDebounced<T>(value: T, ms = 180): T {
 }
 
 export function useSuggest(query: string) {
-  const q = useDebounced(query.trim(), 180);
+  const q = useDebounced(query.trim());
   return useQuery<{ suggestions: Suggestion[]; parsed: ParsedHint | null }>({
     queryKey: ["suggest", q],
     enabled: q.length > 0,

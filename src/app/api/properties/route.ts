@@ -44,11 +44,9 @@ export async function GET(req: Request) {
       offset: q.offset,
     });
 
-    const clusters = clusterFor(result.points, q.zoom);
-
-    // Both are always returned. The map picks which to draw by zoom, so moving
-    // between clusters and individual prices costs no round trip — and a
-    // clustering failure can never leave the map with nothing on it.
+    // The browser draws locality markers from localityCounts. Keep clusters
+    // available for integrations that request the complete response.
+    const clusters = sp.get("clusters") === "0" ? [] : clusterFor(result.points, q.zoom);
     return NextResponse.json({
       total: result.total,
       items: result.items,

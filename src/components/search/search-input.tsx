@@ -23,12 +23,14 @@ export function SearchInput({
   size = "lg",
   onDone,
   className,
+  stayOnMap = false,
 }: {
   autoFocus?: boolean;
   placeholder?: string;
   size?: "md" | "lg";
   onDone?: () => void;
   className?: string;
+  stayOnMap?: boolean;
 }) {
   const router = useRouter();
   const [value, setValue] = useState("");
@@ -51,8 +53,19 @@ export function SearchInput({
   }
 
   function openResults() {
+    if (stayOnMap) return;
     const { filters, anchors, radius } = useDiscovery.getState();
     router.push(`/search?${filtersToParams(filters, anchors, radius)}`);
+  }
+
+  function startMapSearch() {
+    setUseBounds(false);
+    if (stayOnMap) {
+      const store = useDiscovery.getState();
+      store.setPolygon(null);
+      store.setDrawMode("none");
+      store.select(null);
+    }
   }
 
   const parsed = data?.parsed ?? null;
@@ -105,7 +118,7 @@ export function SearchInput({
         return;
       }
 
-      setUseBounds(false);
+      startMapSearch();
       setFilters(json.parsed.filters);
       if (json.parsed.target && json.parsed.radiusKm) {
         setRadius({
@@ -144,16 +157,18 @@ export function SearchInput({
     setOpen(false);
     setValue("");
     if (s.group === "Localities" && s.slug) {
-      setUseBounds(false);
+      startMapSearch();
       setFilters({ localitySlugs: [s.slug] });
       setRadius(null);
-      selectLocality(s.slug);
-      if (s.location) flyTo(s.location, 13.2);
+      if (!stayOnMap) {
+        selectLocality(s.slug);
+        if (s.location) flyTo(s.location, 13.2);
+      }
       openResults();
     } else if (s.href) {
       router.push(s.href);
     } else if (s.location) {
-      setUseBounds(false);
+      startMapSearch();
       setFilters({ localitySlugs: [] });
       setRadius({ center: s.location, km: 3, label: s.label });
       flyTo(s.location, 13);

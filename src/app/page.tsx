@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { allLocalities, featuredProjects, queryProperties } from "@/lib/data/repository";
+import { allLocalities, allProjects, featuredProjects, queryProperties } from "@/lib/data/repository";
 import { formatCount, formatPrice, formatPriceSqft, projectStatusLabel } from "@/lib/format";
 import { Hero } from "@/components/home/hero";
 import { Img } from "@/components/ui/img";
@@ -15,7 +15,10 @@ export default function HomePage() {
   const localities = inventory.map(({ slug, name, center, boundary, avgPriceSqft }) => ({
     slug, name, center, boundary, avgPriceSqft,
   }));
-  const { total, items, localityCounts } = queryProperties({ limit: 3 });
+  const { total, items, points, contextPoints, localityCounts } = queryProperties({ limit: 3 });
+  const mapProjects = allProjects().map(({ id, slug, name, localityId, location, priceMin }) => ({
+    id, slug, name, localityId, lat: location.lat, lng: location.lng, priceMin,
+  }));
 
   const prime = (
     <section key="prime-localities" className={styles.catalogue} aria-labelledby="prime-title">
@@ -69,7 +72,7 @@ export default function HomePage() {
 
   return (
     <main>
-      <Hero localities={localities} initialResults={{ total, items, points: [], contextPoints: [], localityCounts }}
+      <Hero localities={localities} mapProjects={mapProjects} initialResults={{ total, items, points, contextPoints, localityCounts }}
         prime={prime} projects={projects} />
     </main>
   );

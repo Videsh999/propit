@@ -1,9 +1,9 @@
 "use client";
 
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, keepPreviousData, useQueries, queryOptions } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useDiscovery, filtersToParams } from "@/store/discovery";
-import type { ScoredProperty } from "@/types";
+import type { Property, ScoredProperty } from "@/types";
 import type { MapPoint } from "@/components/map/propit-map";
 
 export interface LocalityCount {
@@ -30,21 +30,20 @@ export interface PropertiesResponse {
  * The single source of truth for map + list. Both read this, so they can never
  * disagree about what is on screen.
  */
-export function useProperties(opts: { limit?: number; enabled?: boolean } = {}) {
+export function useProperties(opts: { limit?: number; enabled?: boolean; initialData?: PropertiesResponse } = {}) {
   const filters = useDiscovery((s) => s.filters);
   const anchors = useDiscovery((s) => s.anchors);
   const radius = useDiscovery((s) => s.radius);
   const polygon = useDiscovery((s) => s.polygon);
   const searchedBounds = useDiscovery((s) => s.searchedBounds);
   const useBounds = useDiscovery((s) => s.useBounds);
-  const zoom = useDiscovery((s) => s.zoom);
   const sort = useDiscovery((s) => s.sort);
 
   const params = useMemo(() => {
     const p = filtersToParams(filters, anchors, radius);
     p.set("limit", String(opts.limit ?? 40));
     p.set("sort", sort);
-    p.set("zoom", String(Math.round(zoom * 2) / 2));
+    p.set("clusters", "0");
     if (useBounds && searchedBounds) {
       p.set("west", searchedBounds.west.toFixed(4));
       p.set("south", searchedBounds.south.toFixed(4));
@@ -54,11 +53,12 @@ export function useProperties(opts: { limit?: number; enabled?: boolean } = {}) 
     if (polygon)
       p.set("polygon", JSON.stringify(polygon.map(([a, b]) => [+a.toFixed(5), +b.toFixed(5)])));
     return p;
-  }, [filters, anchors, radius, polygon, searchedBounds, useBounds, zoom, sort, opts.limit]);
+  }, [filters, anchors, radius, polygon, searchedBounds, useBounds, sort, opts.limit]);
 
   return useQuery<PropertiesResponse>({
     queryKey: ["properties", params.toString()],
     enabled: opts.enabled ?? true,
+    initialData: opts.initialData,
     placeholderData: keepPreviousData,
     queryFn: async ({ signal }) => {
       const res = await fetch(`/api/properties?${params.toString()}`, { signal });
@@ -129,4 +129,28 @@ export function usePropertiesByIds(ids: string[]) {
       return res.json();
     },
   });
+}
+
+const comparePropertyKeys = (id: string) => ["compare-property", id] as const;
+
+/** Cache each listing separately so adding or removing one never reloads the table. */
+export function useCompareProperties(ids: string[]) {
+  const results = useQueries({
+    queries: ids.map((id) => queryOptions({
+      queryKey: comparePropertyKeys(id),
+      staleTime: 5 * 60_000,
+      queryFn: async ({ signal }): Promise<Property | null> => {
+        const res = await fetch(`/api/properties/by-id?ids=${encodeURIComponent(id)}`, { signal });
+        if (!res.ok) throw new Error("Couldn't load this property.");
+        return ((await res.json()) as { items: Property[] }).items[0] ?? null;
+      },
+    })),
+  });
+  return {
+    items: results.flatMap(({ data }) => data ? [data] : []),
+    missing: ids.filter((_, index) => results[index].data === null),
+    pending: results.some(({ isPending }) => isPending),
+    failed: results.some(({ isError }) => isError),
+    retry: () => Promise.all(results.filter(({ isError }) => isError).map(({ refetch }) => refetch())),
+  };
 }

@@ -94,7 +94,7 @@ export function parseQuery(query: string, knownLocalities: string[] = []): Parse
   let confidence = 0;
 
   // --- listing type ---
-  if (/\b(rent|rental|renting|lease|to let)\b/i.test(q)) {
+  if (/\b(rent|rentals?|renting|lease|to let)\b/i.test(q)) {
     filters.listingType = "rent";
     matched.push("rent");
     confidence += 0.15;

@@ -560,6 +560,7 @@ export function nearbyPlaces(
   categories: PoiCategory[] | null,
   radiusKm = 6,
   perCategory = 3,
+  { verifiedOnly = false }: { verifiedOnly?: boolean } = {},
 ): NearbyPlace[] {
   const store = getStore();
   const keys = cellsForRadius(center, radiusKm);
@@ -571,6 +572,7 @@ export function nearbyPlaces(
     if (!bucket) continue;
     for (const poi of bucket) {
       if (seen.has(poi.id)) continue;
+      if (verifiedOnly && !poi.verified) continue;
       if (categories && categories.length && !categories.includes(poi.category)) continue;
       const d = haversineKm(center, poi.location);
       if (d > radiusKm) continue;
@@ -582,7 +584,7 @@ export function nearbyPlaces(
 
   // The airport is always relevant even when it falls outside the radius.
   const airport = store.pois.find((p) => p.category === "airport");
-  if (airport && !seen.has(airport.id) && (!categories || categories.includes("airport"))) {
+  if (airport && (!verifiedOnly || airport.verified) && !seen.has(airport.id) && (!categories || categories.includes("airport"))) {
     const d = haversineKm(center, airport.location);
     const leg = estimateLeg(center, airport.location);
     found.push({ ...airport, distanceKm: Math.round(d * 100) / 100, minutes: leg.minutes, estimated: leg.estimated });

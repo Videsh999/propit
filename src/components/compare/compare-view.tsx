@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { X, MessageCircle, Check } from "lucide-react";
-import { useDiscovery } from "@/store/discovery";
+import { ArrowRight, Building2, Check, MapPin, MessageCircle, Plus, Scale, X } from "lucide-react";
+import { MAX_COMPARE_PROPERTIES, useDiscovery } from "@/store/discovery";
+import { ComparePicker } from "@/components/compare/compare-picker";
 import { Img } from "@/components/ui/img";
 import { QualityBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePropertiesByIds } from "@/lib/hooks/use-properties";
+import { useCompareProperties } from "@/lib/hooks/use-properties";
 import { useStoreHydrated } from "@/lib/hooks/use-hydrated";
 import { AMENITY_BY_SLUG } from "@/lib/data/developers";
 import {
@@ -41,6 +42,9 @@ type Row = {
   raw?: (p: Property) => number;
 };
 
+const GROUPS = ["All details", "Costs", "Space", "Property details", "Amenities"] as const;
+type Group = typeof GROUPS[number];
+
 const ROWS: Row[] = [
   { label: "Listing", get: (p) => p.listingType === "buy" ? "For sale" : "For rent" },
   { label: "Sale price", get: (p) => p.listingType === "buy" ? formatPrice(p.price, { compact: false }) : "—", better: "low", raw: (p) => p.listingType === "buy" ? p.price : NaN },
@@ -63,173 +67,227 @@ const ROWS: Row[] = [
   { label: "RERA", get: (p) => p.reraNumber ?? "Not listed" },
 ];
 
+const COST_ROWS = new Set(["Sale price", "Monthly rent", "Security deposit", "Price per sq.ft", "Maintenance"]);
+const SPACE_ROWS = new Set(["Built-up area", "Plot area", "Super built-up area", "Carpet area", "Bedrooms", "Bathrooms", "Parking spaces"]);
+
+function groupFor(row: Row): Group {
+  if (COST_ROWS.has(row.label)) return "Costs";
+  if (SPACE_ROWS.has(row.label)) return "Space";
+  return "Property details";
+}
+
 export function CompareView() {
   const { compareIds, toggleCompare, clearCompare, setAssistantOpen, setAssistantDraft } = useDiscovery();
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [differencesOnly, setDifferencesOnly] = useState(false);
+  const [group, setGroup] = useState<Group>("All details");
   const hydrated = useStoreHydrated();
-  const { data, isLoading, isError, refetch } = usePropertiesByIds(compareIds);
-  const items: Property[] | null =
-    !hydrated || (compareIds.length > 0 && isLoading) ? null : (data?.items ?? []);
-
-  if (items === null) {
-    return (
-      <div className="mx-auto max-w-[1240px] px-5 py-14 md:px-8">
-        <Skeleton className="h-96 w-full" />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return <div className="mx-auto max-w-[720px] px-5 py-16">
-      <h1 className="display text-3xl">Couldn’t load the comparison</h1>
-      <Button className="mt-4" onClick={() => void refetch()}>Try again</Button>
-    </div>;
-  }
-
-  const missing = compareIds.filter((id) => !items.some((item) => item.id === id));
-  if (!items.length) {
-    return (
-      <div className="mx-auto max-w-[720px] px-5 py-24 text-center md:px-8">
-        <h1 className="display text-[36px] text-ink">Nothing to compare yet.</h1>
-        <p className="mx-auto mt-3 max-w-[44ch] text-[15px] leading-relaxed text-muted">
-          Add up to four homes from the map or a listing, and PropIT will lay them out side by side —
-          with prices, areas, configurations and amenities.
-        </p>
-        {missing.length > 0 && <Button className="mt-4" onClick={clearCompare}>Clear unavailable selections</Button>}
-        <Link
-          href="/search"
-          className="mt-6 inline-flex h-11 items-center rounded-[var(--r-pill)] bg-accent px-5 text-[15px] font-medium text-[var(--accent-ink)]"
-        >
-          Find homes
-        </Link>
-      </div>
-    );
-  }
-
+  const { items, missing, pending, failed, retry } = useCompareProperties(compareIds);
+  const busy = !hydrated || (pending && !items.length);
+  const full = compareIds.length >= MAX_COMPARE_PROPERTIES;
   const { best, allAmenities } = computeBest(items);
   const hideMatches = differencesOnly && items.length > 1;
   const visibleRows = ROWS.filter((row) => {
+    if (group !== "All details" && group !== groupFor(row)) return false;
     const values = items.map(row.get);
     return values.some((value) => value !== "—") && (!hideMatches || new Set(values).size > 1);
   });
-  const visibleAmenities = allAmenities.filter((amenity) =>
-    !hideMatches || !items.every((item) => item.amenities.includes(amenity)),
-  );
+  const visibleAmenities = group === "All details" || group === "Amenities"
+    ? allAmenities.filter((amenity) => !hideMatches || !items.every((item) => item.amenities.includes(amenity)))
+    : [];
+  const needsSecond = items.length === 1 && !full;
 
   return (
-    <div className="mx-auto max-w-[1240px] px-5 py-14 md:px-8">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow mb-2">Comparison</p>
-          <h1 className="display text-[36px] leading-tight text-ink md:text-[44px]">
-            {items.length === 1 ? "1 property selected" : `Compare ${items.length} properties`}
-          </h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" size="md" className="gap-1.5" disabled={items.length < 2} onClick={() => { setAssistantDraft("Compare my selected properties"); setAssistantOpen(true); }}>
-            <MessageCircle size={14} strokeWidth={1.75} />
-            Ask PropIT
-          </Button>
-          <Button variant="secondary" size="md" onClick={clearCompare}>
-            Clear all
-          </Button>
+    <div className="mx-auto max-w-[1320px] px-4 pb-24 pt-5 sm:px-8 sm:pt-8">
+      <header className="relative isolate overflow-hidden rounded-3xl border border-[#456051] bg-[#19362b] px-4 py-5 text-[#fffaf0] shadow-e2 sm:px-7 sm:py-7">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,#4b6c51_0%,transparent_62%)]" />
+        <div className="flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#d6e3d8]">
+              <Scale size={16} aria-hidden="true" /> Property comparison
+            </p>
+            <h1 className="font-[family-name:var(--font-editorial)] text-[clamp(34px,5vw,54px)] leading-none tracking-tight">
+              Compare properties
+            </h1>
+            <p className="mt-2 max-w-[52ch] text-sm text-[#d6e3d8]">
+              Compare price, space and amenities for up to {MAX_COMPARE_PROPERTIES} listings.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {items.length >= 2 && (
+              <Button variant="ghost" className="border border-white/25 text-[#fffaf0] hover:bg-white/10"
+                onClick={() => { setAssistantDraft("Compare my selected properties"); setAssistantOpen(true); }}>
+                <MessageCircle size={15} aria-hidden="true" /> Ask PropIT
+              </Button>
+            )}
+            <Button variant="primary" type="button" disabled={!hydrated || full}
+              aria-haspopup="dialog" onClick={() => setPickerOpen(true)}
+              className="bg-[#f1d8a6] font-semibold text-[#21352a] hover:bg-[#ffe7b9]">
+              <Plus size={17} aria-hidden="true" /> Add property
+            </Button>
+          </div>
         </div>
       </header>
 
-      <div className="mb-4 flex flex-wrap items-center gap-4 text-sm">
-        <Link href="/search" className="font-semibold text-accent hover:underline">Browse more properties</Link>
-        {items.length > 1 && <label className="inline-flex items-center gap-2">
-          <input type="checkbox" checked={differencesOnly} onChange={(event) => setDifferencesOnly(event.target.checked)} />
-          Show differences only
-        </label>}
+      <div className="my-4 flex flex-wrap items-center justify-between gap-2 px-0.5">
+        <p role="status" className="text-sm font-semibold">
+          {hydrated ? `${compareIds.length} of ${MAX_COMPARE_PROPERTIES} selected` : "Loading your selection…"}
+        </p>
+        <div className="flex flex-wrap items-center gap-3 text-xs font-semibold sm:gap-5">
+          <Link href="/search" className="inline-flex items-center gap-1 text-accent hover:underline">Browse map <ArrowRight size={13} aria-hidden="true" /></Link>
+          {hydrated && compareIds.length > 0 && <button type="button" className="min-h-9 text-muted hover:text-ink hover:underline" onClick={clearCompare}>Clear all</button>}
+        </div>
       </div>
-      {missing.length > 0 && <p role="status" className="mb-4 text-sm text-muted">
-        {missing.length} selected {missing.length === 1 ? "property is" : "properties are"} unavailable.{" "}
-        <button type="button" className="text-accent underline" onClick={() => missing.forEach(toggleCompare)}>Remove unavailable selections</button>
+      {full && hydrated && <p className="mb-3 text-xs text-muted">Comparison full. Remove a property to add another.</p>}
+      {missing.length > 0 && (
+        <p role="status" className="mb-4 text-sm text-muted">
+          {missing.length} selected {missing.length === 1 ? "property is" : "properties are"} unavailable.{" "}
+          <button type="button" className="text-accent underline" onClick={() => missing.forEach(toggleCompare)}>Remove unavailable selections</button>
+        </p>
+      )}
+      {pending && items.length > 0 && <p role="status" className="mb-3 text-xs text-muted">Loading a selected property…</p>}
+      {failed && items.length > 0 && <p role="status" className="mb-3 text-xs text-muted">
+        A selected property couldn’t load.{" "}
+        <button type="button" className="text-accent underline" onClick={() => void retry()}>Try again</button>
       </p>}
-      {items.length > 1 && <p className="mb-2 text-xs text-muted sm:hidden">Swipe the table to see more properties.</p>}
-      {hideMatches && !visibleRows.length && !visibleAmenities.length && <p className="mb-4 text-sm text-muted">These properties match on the available fields.</p>}
-      <div className="overflow-x-auto scroll-quiet rounded-xl border border-line" tabIndex={0} role="region" aria-label="Property comparison table">
-        <table className="w-full border-separate border-spacing-0" style={{ minWidth: 120 + items.length * 200 }}>
-          <thead>
-            <tr>
-              <th scope="col" className="sticky left-0 z-10 w-[120px] bg-paper px-3 text-left text-xs">Property</th>
-              {items.map((p) => (
-                <th scope="col" key={p.id} className="p-2 align-top" style={{ width: `${80 / items.length}%` }}>
-                  <div className="relative">
-                    <Link href={`/property/${p.slug}`}>
-                      <Img
-                        src={p.images[0]?.url ?? ""}
-                        alt={p.title}
-                        seed={p.id}
-                        className="aspect-[4/3] w-full rounded-[var(--r-md)]"
-                        sizes="300px"
-                      />
-                    </Link>
-                    <button
-                      onClick={() => toggleCompare(p.id)}
-                      className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-[color-mix(in_srgb,var(--paper-raised)_88%,transparent)] text-ink backdrop-blur"
-                      aria-label={`Remove ${p.title}`}
-                    >
-                      <X size={13} strokeWidth={2} />
-                    </button>
-                  </div>
-                  <Link
-                    href={`/property/${p.slug}`}
-                    className="mt-2.5 block text-left text-[14px] font-medium leading-snug text-ink hover:text-accent"
-                  >
-                    {p.title}
-                  </Link>
-                  <p className="mt-1 text-left text-[12px] font-normal text-faint">{p.address}</p>
-                  <div className="mt-1.5 flex">
-                    <QualityBadge quality={p.dataQuality} />
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {visibleRows.map((row) => (
-              <tr key={row.label} className="[&>*]:border-t [&>*]:border-line">
-                <th scope="row" className="sticky left-0 z-10 bg-paper px-3 py-3 text-left text-[13px] font-normal text-faint">
-                  {row.label}
-                </th>
-                {items.map((p) => {
-                  const isBest = best.get(row.label) === p.id;
-                  return (
-                    <td
-                      key={p.id}
-                      className={cn(
-                        "tnum px-2 py-3 text-[14px]",
-                        isBest ? "font-semibold text-accent" : "text-ink",
-                      )}
-                    >
-                      {row.get(p)}
-                      {isBest && <span className="ml-1.5 text-[10px] font-normal">{row.better === "low" ? "Lowest" : "Largest"}</span>}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-            {visibleAmenities.map((amenity) => (
-              <tr key={amenity} className="[&>*]:border-t [&>*]:border-line">
-                <th scope="row" className="sticky left-0 z-10 bg-paper px-3 py-2 text-left text-xs font-medium text-muted">
-                  {AMENITY_BY_SLUG.get(amenity as never)?.name ?? amenity}
-                </th>
-                {items.map((property) => (
-                  <td key={property.id} className="px-2 py-2 text-xs text-muted">
-                    {property.amenities.includes(amenity)
-                      ? <span className="inline-flex items-center gap-1 text-accent"><Check size={13} aria-hidden="true" /> Listed</span>
-                      : "Not listed"}
-                  </td>
+      {busy ? (
+        <Skeleton className="h-56 w-full rounded-2xl" />
+      ) : failed && !items.length ? (
+        <div className="rounded-2xl border border-line bg-raised p-5">
+          <p className="text-sm font-semibold">Couldn’t load the comparison.</p>
+          <Button size="sm" className="mt-3" onClick={() => void retry()}>Try again</Button>
+        </div>
+      ) : !items.length ? (
+        <div className="grid min-h-52 place-items-center rounded-2xl border border-dashed border-line-strong bg-raised p-6 text-center">
+          <div>
+            <span className="mx-auto grid size-11 place-items-center rounded-full bg-accent-wash text-accent"><Building2 size={21} aria-hidden="true" /></span>
+            <h2 className="mt-3 text-[19px] font-semibold tracking-tight">Start with a property</h2>
+            <p className="mt-1 text-sm text-muted">Search by listing name, project or locality.</p>
+            {!full && <Button type="button" className="mt-3" onClick={() => setPickerOpen(true)}><Plus size={15} aria-hidden="true" /> Add first property</Button>}
+          </div>
+        </div>
+      ) : (
+        <>
+          {items.length > 1 && (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div role="group" aria-label="Comparison sections" className="flex max-w-full flex-wrap gap-1.5">
+                {GROUPS.map((option) => (
+                  <button type="button" key={option} aria-pressed={group === option} onClick={() => setGroup(option)}
+                    className="min-h-9 rounded-full border border-line bg-raised px-3 text-xs font-semibold text-muted hover:border-accent aria-pressed:border-accent aria-pressed:bg-accent-wash aria-pressed:text-accent">
+                    {option}
+                  </button>
                 ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-
+              </div>
+              <label className="inline-flex min-h-9 items-center gap-2 text-xs font-semibold text-muted">
+                <input type="checkbox" checked={differencesOnly} className="size-4 accent-accent" onChange={(event) => setDifferencesOnly(event.target.checked)} />
+                Differences only
+              </label>
+            </div>
+          )}
+          {items.length > 1 && <p className="mb-2 text-xs text-muted sm:hidden">Swipe to compare all selected properties.</p>}
+          <div className={cn("scroll-quiet overflow-x-auto rounded-2xl border border-line bg-raised", items.length === 1 && "max-w-[850px]")} tabIndex={0} role="region" aria-label="Property comparison table">
+            <table className="w-full table-fixed border-separate border-spacing-0"
+              style={{ minWidth: 100 + (items.length + Number(needsSecond)) * 177 }}>
+              <colgroup>
+                <col className="w-[100px] sm:w-[155px]" />
+                {items.map((property) => <col key={property.id} />)}
+                {needsSecond && <col />}
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col" className="sticky left-0 z-10 bg-paper px-2.5 py-3 text-left align-bottom text-xs font-semibold text-muted sm:px-4">Property</th>
+                  {items.map((property) => (
+                    <th scope="col" key={property.id} className="border-l border-line p-2 text-left align-top sm:p-3">
+                      <ComparisonCard property={property} onRemove={() => toggleCompare(property.id)} />
+                    </th>
+                  ))}
+                  {needsSecond && (
+                    <th scope="col" className="border-l border-line p-2 align-top sm:p-3">
+                      <button type="button" aria-haspopup="dialog" onClick={() => setPickerOpen(true)}
+                        className="grid h-[116px] w-full place-items-center rounded-xl border border-dashed border-line-strong bg-paper px-2 text-accent hover:border-accent hover:bg-accent-wash sm:h-[154px]">
+                        <span className="grid justify-items-center gap-1.5 text-xs font-semibold">
+                          <span className="grid size-8 place-items-center rounded-full bg-accent-wash"><Plus size={16} aria-hidden="true" /></span>
+                          Add another property
+                        </span>
+                      </button>
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {visibleRows.map((row) => (
+                  <tr key={row.label} className="[&>*]:border-t [&>*]:border-line">
+                    <th scope="row" className="sticky left-0 z-10 bg-paper px-2.5 py-2.5 text-left text-xs font-medium text-muted sm:px-4">
+                      {row.label}
+                    </th>
+                    {items.map((property) => {
+                      const isBest = best.get(row.label) === property.id;
+                      return (
+                        <td key={property.id} className={cn("tnum border-l px-2.5 py-2.5 text-sm sm:px-4", isBest && "bg-accent-wash/55 font-semibold text-accent")}>
+                          {row.get(property)}
+                          {isBest && <span className="mt-0.5 block text-[10px] font-medium">{row.better === "low" ? "Lowest" : "Largest"}</span>}
+                        </td>
+                      );
+                    })}
+                    {needsSecond && <td className="border-l bg-paper/75" />}
+                  </tr>
+                ))}
+                {visibleAmenities.map((amenity) => (
+                  <tr key={amenity} className="[&>*]:border-t [&>*]:border-line">
+                    <th scope="row" className="sticky left-0 z-10 bg-paper px-2.5 py-2.5 text-left text-xs font-medium text-muted sm:px-4">
+                      {AMENITY_BY_SLUG.get(amenity as never)?.name ?? amenity}
+                    </th>
+                    {items.map((property) => (
+                      <td key={property.id} className="border-l px-2.5 py-2.5 text-xs text-muted sm:px-4">
+                        {property.amenities.includes(amenity)
+                          ? <span className="inline-flex items-center gap-1 text-accent"><Check size={13} aria-hidden="true" /> Listed</span>
+                          : "Not listed"}
+                      </td>
+                    ))}
+                    {needsSecond && <td className="border-l bg-paper/75" />}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!visibleRows.length && !visibleAmenities.length && (
+              <p role="status" className="border-t border-line px-3 py-4 text-sm text-muted">
+                {hideMatches ? "No differences in this section." : "No details are listed in this section."}
+              </p>
+            )}
+          </div>
+        </>
+      )}
+      {pickerOpen && <ComparePicker onClose={() => setPickerOpen(false)} />}
     </div>
+  );
+}
+
+function ComparisonCard({ property, onRemove }: { property: Property; onRemove: () => void }) {
+  const href = `/property/${property.slug}`;
+  const price = property.listingType === "buy" ? formatPrice(property.price)
+    : property.rentMonthly == null ? "Rent on request" : formatRent(property.rentMonthly);
+
+  return (
+    <article className="relative">
+      <Link href={href} className="group block rounded-xl" aria-label={`View ${property.title}`}>
+        <Img src={property.images[0]?.url ?? ""} alt="" seed={property.id}
+          className="h-[116px] w-full rounded-xl sm:h-[154px] [&_img]:duration-300 motion-safe:[&_img]:group-hover:scale-[1.025]" sizes="(max-width: 640px) 185px, 340px" />
+        <span className="absolute left-2 top-2 rounded-full bg-[#19362b] px-2 py-1 text-[10px] font-semibold text-white">
+          {property.listingType === "buy" ? "For sale" : "For rent"}
+        </span>
+        <span className="mt-2 block text-[14px] font-semibold leading-tight group-hover:text-accent">{property.title}</span>
+      </Link>
+      <button type="button" onClick={onRemove} aria-label={`Remove ${property.title}`}
+        className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-raised text-ink shadow-e1 transition-colors hover:bg-sunk">
+        <X size={15} aria-hidden="true" />
+      </button>
+      <p className="mt-1 flex items-start gap-1 text-xs font-normal text-muted">
+        <MapPin size={12} className="mt-0.5 shrink-0" aria-hidden="true" /> {property.address}
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <strong className="tnum text-[17px] font-semibold tracking-tight text-accent">{price}</strong>
+        <QualityBadge quality={property.dataQuality} />
+      </div>
+    </article>
   );
 }

@@ -176,9 +176,15 @@ It doesn't sit beside the map — it drives it. Tools in `src/lib/ai/tools.ts`:
 Each returns facts to the model and **client actions** to the browser, so you watch the map respond
 as it talks.
 
-Without `ANTHROPIC_API_KEY` the same tools run behind a deterministic concierge: less conversational,
-equally truthful, and genuinely functional — it will place your office, compute the zone and move the
-map from plain language.
+PropIT AI looks up facts when a question arrives. It reads the current project, property, locality or
+comparison, and links answers to the PropIT records used. Official links cover TG RERA, Telangana
+registration and land services, HMDA planning and Hyderabad Metro. These links guide users to the
+official records. The assistant does not verify individual registrations, titles or approvals.
+
+The catalog currently uses generated showcase data. Citywide live availability, transaction prices
+and independent project verification require an authorized data feed. The local assistant supports
+project and locality questions, comparisons and map search without a key. Set `ANTHROPIC_API_KEY`
+for conversational tool use and `ANTHROPIC_MODEL` to override the default Sonnet model.
 
 ---
 
