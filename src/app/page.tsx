@@ -14,7 +14,7 @@ export default function HomePage() {
   const localities = inventory.map(({ slug, name, center, boundary, avgPriceSqft }) => ({
     slug, name, center, boundary, avgPriceSqft,
   }));
-  const { total, items, points, contextPoints, localityCounts } = queryProperties({ limit: 3 });
+  const { total, items, points, contextPoints, localityCounts } = queryProperties({ limit: 6 });
   const mapProjects = allProjects().map(({ id, slug, name, localityId, location, priceMin }) => ({
     id, slug, name, localityId, lat: location.lat, lng: location.lng, priceMin,
   }));

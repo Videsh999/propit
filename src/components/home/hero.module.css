@@ -17,7 +17,7 @@
 .mapEyebrow { display: flex; align-items: center; gap: 7px; margin-bottom: 23px; color: #e6e0ef; font-size: 12px; font-weight: 600; }
 .mapEyebrow svg { color: var(--highlight); }
 .mapEyebrow > span { margin-left: auto; font-size: 10px; font-weight: 500; color: #bdb4cf; letter-spacing: .09em; text-transform: uppercase; }
-.searchHeading h1 { font-family: var(--font-display); font-size: 71px; font-weight: 750; line-height: .98; letter-spacing: -.065em; }
+.searchHeading h1 { font-family: var(--font-display); font-size: 54px; font-weight: 750; line-height: .98; letter-spacing: -.065em; }
 .searchHeading h1 > span { color: var(--highlight); }
 .searchHeading p { margin-top: 17px; color: #d1cadc; font-size: 14px; letter-spacing: -.015em; }
 .listingTabs { display: flex; gap: 4px; padding: 4px; margin-bottom: 13px; border: 1px solid #ffffff1f; border-radius: 12px; background: #ffffff07; }
@@ -38,7 +38,9 @@
 .filterButton:hover { background: #ffffff18; }
 .filterLabel { display: none; }
 .filterCount { display: grid; position: absolute; right: -5px; top: -5px; width: 17px; height: 17px; place-items: center; border-radius: 50%; color: #282431; background: var(--highlight); font-size: 10px; font-weight: 700; }
-.railResults { min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #786b8c transparent; border-top: 1px solid #ffffff21; padding-top: 19px; }
+.sidebarScroll { min-height: 0; flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #786b8c transparent; }
+.sidebarLocalities { border-top: 1px solid #ffffff21; padding-top: 14px; }
+.railResults { margin-top: 18px; border-top: 1px solid #ffffff21; padding-top: 15px; }
 .railResultHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 11px; }
 .railResultHeader p { font-size: 14px; font-weight: 600; }
 .railResultHeader p > span { display: block; margin-top: 3px; color: #bfb6ce; font-size: 12px; font-weight: 400; }
@@ -69,16 +71,33 @@
 .textLink { display: inline-flex; flex-shrink: 0; min-height: 42px; align-items: center; justify-content: center; border: 1px solid var(--line-strong); border-radius: 10px; padding: 0 15px; color: var(--ink); font-size: 14px; font-weight: 600; }
 .textLink:hover { background: var(--accent-wash); border-color: var(--accent-line); }
 .results { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; }
+.resultOptions { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)) auto; align-items: end; gap: 10px; padding: 15px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper-raised); }
+.resultOptions > label { min-width: 0; }
+.resultOptions > label > span { display: block; margin-bottom: 6px; color: var(--ink-muted); font-size: 12px; font-weight: 600; }
+.optionSelect { position: relative; }
+.optionSelect select { appearance: none; width: 100%; height: 40px; min-width: 0; padding: 0 27px 0 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); color: var(--ink); font-size: 13px; }
+.optionSelect svg { position: absolute; right: 9px; top: 14px; pointer-events: none; color: var(--ink-muted); }
+.optionActions { display: flex; flex-wrap: wrap; gap: 6px; align-items: end; }
+.optionActions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--accent); background: var(--accent-wash); font-size: 12px; font-weight: 600; }
+.resultsSummary { margin: 12px 2px 17px; color: var(--ink-muted); font-size: 13px; }
 .card { display: block; overflow: hidden; border: 1px solid var(--line); border-radius: 17px; background: var(--paper-raised); transition: box-shadow 220ms, transform 220ms; }
 .cardVisual { position: relative; overflow: hidden; }
-.cardImage { width: 100%; aspect-ratio: 5 / 4; transition: transform 650ms var(--ease); }
+.cardImage { width: 100%; aspect-ratio: 16 / 11; transition: transform 650ms var(--ease); }
 .cardBadge { position: absolute; bottom: 15px; left: 16px; padding: 6px 10px; border-radius: 7px; background: #f6f4fbed; color: #3e354e; backdrop-filter: blur(10px); font-size: 11px; font-weight: 650; }
 .cardBody { min-width: 0; padding: 22px 20px 16px; }
 .cardBody strong { display: block; font-family: var(--font-display); font-size: 30px; font-weight: 750; letter-spacing: -.055em; line-height: 1.12; }
-.cardTitle { display: block; margin-top: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-sans); font-size: 16px; font-weight: 600; letter-spacing: -.025em; }
+.cardTitle { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; min-height: 44px; line-height: 1.4; margin-top: 10px; overflow: hidden; text-overflow: ellipsis; white-space: normal; font-family: var(--font-sans); font-size: 16px; font-weight: 600; letter-spacing: -.025em; }
 .cardBody p { display: flex; align-items: center; gap: 6px; margin-top: 5px; color: var(--ink-muted); font-size: 13px; }
 .cardBody .address { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cardBody .cardFacts { margin-top: 20px; padding-top: 13px; border-top: 1px solid var(--line); font-size: 13px; }
+.cardBody .cardFacts { flex-wrap: wrap; gap: 7px 13px; margin-top: 15px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; }
+.cardFacts > span { display: inline-flex; align-items: center; gap: 5px; }
+.cardAreas { display: grid; grid-template-columns: repeat(auto-fit,minmax(74px,1fr)); gap: 10px; margin-block: 15px; }
+.cardAreas dt { color: var(--ink-muted); font-size: 10px; }
+.cardAreas dd { margin-top: 4px; color: var(--ink); font-size: 13px; font-weight: 600; }
+.cardStatus { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--ink-muted); font-size: 11px; }
+.cardStatus > span:first-child { padding: 4px 7px; border-radius: 6px; background: var(--accent-wash); color: var(--accent); }
+.cardBody .cardAmenities { display: block; margin-top: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.cardDetailsLink { display: block; margin-top: 15px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--accent); font-size: 13px; font-weight: 600; }
 .card:hover .cardTitle { color: var(--accent); }
 .empty { grid-column: 1 / -1; padding: 24px; border: 1px solid var(--line); border-radius: 14px; color: var(--ink-muted); background: var(--paper-raised); font-size: 16px; }
 .empty button { color: var(--accent); text-decoration: underline; }
@@ -104,13 +123,14 @@
 .projectInfo div { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 14px; color: var(--accent); font-size: 15px; }
 .localityCard img, .projectCard img { transition: transform 650ms var(--ease); }
 @media (hover:hover) and (prefers-reduced-motion:no-preference) { .card:hover { box-shadow: var(--e2); transform: translateY(-4px); } .card:hover .cardImage, .localityCard:hover img, .projectCard:hover img { transform: scale(1.045); } }
-@media (min-width:901px) and (max-height:760px) { .mapControls { gap: 18px; padding-top: 24px; } .mapEyebrow { margin-bottom: 17px; } .searchHeading h1 { font-size: 60px; } .searchHeading { margin-bottom: 19px; } .searchHeading p { margin-top: 13px; } .railResults { padding-top: 14px; } .railHome { padding-block: 7px; } .railImage { height: 54px; width: 54px; } }
-@media (max-width:1150px) and (min-width:901px) { .map { grid-template-columns: 335px minmax(0,1fr); } .mapControls { padding-inline: 20px; } .searchHeading h1 { font-size: 64px; } .mapFooter { max-width: calc(100% - 85px); } }
+@media (min-width:901px) and (max-height:760px) { .mapControls { gap: 18px; padding-top: 24px; } .mapEyebrow { margin-bottom: 17px; } .searchHeading h1 { font-size: 46px; } .searchHeading { margin-bottom: 19px; } .searchHeading p { margin-top: 13px; } .railResults { padding-top: 14px; } .railHome { padding-block: 7px; } .railImage { height: 54px; width: 54px; } }
+@media (max-width:1150px) and (min-width:901px) { .map { grid-template-columns: 335px minmax(0,1fr); } .mapControls { padding-inline: 20px; } .searchHeading h1 { font-size: 50px; } .mapFooter { max-width: calc(100% - 85px); } }
+@media (max-width:1100px) { .resultOptions { grid-template-columns: repeat(3,minmax(0,1fr)); } }
 @media (max-width:900px) {
   .map { display: block; min-height: 570px; }
   .mapViewport { height: 100%; width: 100%; }
   .mapControls { position: absolute; top: 14px; left: 14px; width: min(360px,calc(100% - 78px)); gap: 0; border: 1px solid #ffffff22; border-radius: 18px; padding: 20px; box-shadow: var(--e3); }
-  .railResults { display: none; }
+  .sidebarScroll { display: none; }
   .mapEyebrow { margin-bottom: 12px; }
   .mapEyebrow > span { font-size: 9px; }
   .searchHeading { margin-bottom: 16px; }
@@ -144,6 +164,7 @@
   .sectionHeader { flex-wrap: wrap; gap: 14px; padding-top: 42px; margin-bottom: 20px; }
   .sectionEyebrow { font-size: 10px; margin-bottom: 10px; }
   .sectionHeader h2 { font-size: 36px; }
+  .resultOptions { grid-template-columns: repeat(2,minmax(0,1fr)); padding: 12px; }
   .textLink { min-height: 37px; font-size: 12px; padding-inline: 12px; }
   .cardImage { aspect-ratio: 4 / 3; }
   .cardBody { padding: 18px; }

@@ -5,12 +5,13 @@ import { formatPrice, projectStatusLabel } from "@/lib/format";
 import type { Project } from "@/types";
 
 export function ProjectCard({
-  project, developerName, localityName, size = "md",
+  project, developerName, localityName, size = "md", showDetails = false,
 }: {
   project: Project;
   developerName: string;
   localityName: string;
   size?: "md" | "lg";
+  showDetails?: boolean;
 }) {
   return (
     <Link href={`/project/${project.slug}`} className="group block overflow-hidden rounded-[var(--r-lg)] border border-line bg-raised p-2.5 shadow-e1 transition-shadow hover:shadow-e2">
@@ -38,7 +39,11 @@ export function ProjectCard({
           From <span className="font-semibold">{formatPrice(project.priceMin)}</span>
           <span className="text-faint"> · {project.configurations.join(", ")}</span>
         </p>
-        <p className="tnum mt-0.5 text-[12px] text-faint">Possession {project.possessionDate} · {project.landAreaAcres} acres</p>
+        <p className="tnum mt-1.5 text-[12px] text-faint">Possession {project.possessionDate} · {project.landAreaAcres} acres</p>
+        {showDetails && <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3 text-xs">
+          <div><dt className="text-muted">Total units</dt><dd className="mt-1 font-semibold">{project.unitsTotal.toLocaleString("en-IN")}</dd></div>
+          <div><dt className="text-muted">Towers · floors</dt><dd className="mt-1 font-semibold">{project.towers} · {project.floors}</dd></div>
+        </dl>}
       </div>
     </Link>
   );

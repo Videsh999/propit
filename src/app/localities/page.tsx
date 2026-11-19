@@ -12,21 +12,18 @@ export default function LocalitiesPage() {
   const localities = allLocalities();
 
   return (
-    <main className="mx-auto max-w-[1440px] px-5 py-16 md:px-8 md:py-20">
-      <header className="max-w-[58ch]">
+    <main className="mx-auto max-w-[1440px] px-5 py-7 md:px-8 md:py-10">
+      <header className="mb-8 max-w-[70ch]">
         <p className="eyebrow mb-3">Explore Hyderabad · {localities.length} localities</p>
         <h1 className="display text-[42px] leading-[1.02] text-ink md:text-[58px]">
-          Forty localities, honestly measured.
+          Localities in Hyderabad.
         </h1>
-        <p className="mt-5 text-[16px] leading-relaxed text-muted">
-          Pricing, inventory and momentum for every corridor PropIT covers. Figures are modelled
-          from listed inventory — they are estimates, and we label them as such.
+        <p className="mt-3 text-[16px] leading-relaxed text-muted">
+          Explore neighbourhoods side by side, with prices, available homes and locality details.
         </p>
       </header>
 
-      <div className="mt-20 md:mt-28">
-        <LocalityIndex localities={localities} />
-      </div>
+      <LocalityIndex localities={localities} />
     </main>
   );
 }

@@ -25,21 +25,18 @@ export default function ProjectsPage() {
   const leads = featuredProjects(3).map((p) => p.id);
 
   return (
-    <main className="mx-auto max-w-[1440px] px-5 py-16 md:px-8 md:py-20">
-      <header className="max-w-[58ch]">
+    <main className="mx-auto max-w-[1440px] px-5 py-7 md:px-8 md:py-10">
+      <header className="mb-8 max-w-[70ch]">
         <p className="eyebrow mb-3">Projects · {projects.length} tracked</p>
         <h1 className="display text-[42px] leading-[1.02] text-ink md:text-[58px]">
-          Every development, one map.
+          Projects in Hyderabad.
         </h1>
-        <p className="mt-5 text-[16px] leading-relaxed text-muted">
-          New launches, sites under construction and buildings with keys in hand — each one still
-          attached to the ground it sits on.
+        <p className="mt-3 text-[16px] leading-relaxed text-muted">
+          Filter by locality, budget and configuration. Compare the details side by side.
         </p>
       </header>
 
-      <div className="mt-20 md:mt-28">
-        <ProjectIndex projects={projects} leadIds={leads} />
-      </div>
+      <ProjectIndex projects={projects} leadIds={leads} />
     </main>
   );
 }

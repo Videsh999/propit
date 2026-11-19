@@ -1,239 +1,77 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowUpRight, TrendingUp } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { ChevronDown, MapPin, SlidersHorizontal } from "lucide-react";
 import { Img } from "@/components/ui/img";
-import { Reveal } from "@/components/ui/reveal";
-import { useDiscovery } from "@/store/discovery";
+import { Button } from "@/components/ui/button";
 import { formatCount, formatPrice, formatPriceSqft } from "@/lib/format";
 import type { Locality } from "@/types";
 import { cn } from "@/lib/utils";
+import styles from "@/components/browse/browse.module.css";
 
-/**
- * The locality index.
- *
- * Two registers rather than one grid of forty identical cards. The three
- * localities carrying the most inventory get written up — an image, a sentence
- * about what living there is actually like, and the numbers that decide it. The
- * rest arrive as a corridor-by-corridor table, which is denser, directly
- * comparable, and reads like a market report instead of an advertisement.
- *
- * Every row is a handle on the map: hovering places it, clicking opens it there.
- */
 export function LocalityIndex({ localities }: { localities: Locality[] }) {
-  const byInventory = [...localities].sort((a, b) => b.inventoryCount - a.inventoryCount);
-  const leads = byInventory.slice(0, 3);
-  const leadSlugs = new Set(leads.map((l) => l.slug));
-
-  const corridors = new Map<string, Locality[]>();
-  for (const l of localities) {
-    const key = l.corridor.split("·")[0].trim();
-    const arr = corridors.get(key);
-    if (arr) arr.push(l);
-    else corridors.set(key, [l]);
+  const [query, setQuery] = useState("");
+  const [corridor, setCorridor] = useState("");
+  const [rate, setRate] = useState("");
+  const [sort, setSort] = useState("inventory");
+  const [shown, setShown] = useState(12);
+  const [mobileFilters, setMobileFilters] = useState(false);
+  const resultsRef = useRef<HTMLElement>(null);
+  function showResults() {
+    setMobileFilters(false);
+    requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }));
   }
-  for (const list of corridors.values()) list.sort((a, b) => b.avgPriceSqft - a.avgPriceSqft);
+  const corridors = useMemo(() => [...new Set(localities.map((locality) => locality.corridor.split("·")[0].trim()))].sort(), [localities]);
+  const matches = useMemo(() => localities.filter((locality) =>
+    (!query.trim() || `${locality.name} ${locality.corridor}`.toLowerCase().includes(query.trim().toLowerCase()))
+    && (!corridor || locality.corridor.split("·")[0].trim() === corridor)
+    && (!rate || locality.avgPriceSqft <= Number(rate)),
+  ).sort((a, b) => sort === "price_asc" ? a.avgPriceSqft - b.avgPriceSqft : sort === "price_desc" ? b.avgPriceSqft - a.avgPriceSqft
+    : sort === "momentum" ? b.momentumPct - a.momentumPct : b.inventoryCount - a.inventoryCount), [localities, query, corridor, rate, sort]);
+  function reset() { setQuery(""); setCorridor(""); setRate(""); setShown(12); }
 
-  return (
-    <>
-      <section className="space-y-20 md:space-y-28">
-        {leads.map((l, i) => (
-          <LeadLocality key={l.id} locality={l} flip={i % 2 === 1} index={i} />
-        ))}
-      </section>
-
-      <section className="mt-24 md:mt-32">
-        <Reveal>
-          <div className="flex flex-wrap items-end justify-between gap-6 border-b border-line pb-5">
-            <h2 className="display text-[28px] leading-tight text-ink md:text-[36px]">
-              Every corridor, measured the same way.
-            </h2>
-            <p className="max-w-[42ch] text-[13px] leading-relaxed text-muted">
-              Prices are modelled from listed inventory, not transaction records. Hover a row to
-              place it on the map.
-            </p>
-          </div>
-        </Reveal>
-
-        {[...corridors.entries()].map(([corridor, items]) => (
-          <div key={corridor} className="mt-12 first:mt-8">
-            <h3 className="eyebrow mb-1">{corridor} Hyderabad</h3>
-            <CorridorTable localities={items} highlighted={leadSlugs} />
-          </div>
-        ))}
-      </section>
-    </>
-  );
-}
-
-function LeadLocality({
-  locality: l,
-  flip,
-  index,
-}: {
-  locality: Locality;
-  flip: boolean;
-  index: number;
-}) {
-  return (
-    <Reveal delay={index * 0.04}>
-      <article className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
-        <Link
-          href={`/locality/${l.slug}`}
-          className={cn("group block overflow-hidden rounded-[var(--r-lg)]", flip && "lg:order-2")}
-        >
-          <Img
-            src={l.heroImage}
-            alt={l.name}
-            seed={l.slug}
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            className="aspect-[5/4] w-full transition-transform duration-[700ms] [transition-timing-function:var(--ease)] group-hover:scale-[1.02]"
-          />
-        </Link>
-
-        <div className={cn(flip && "lg:order-1")}>
-          <p className="eyebrow mb-3">{l.corridor}</p>
-          <h2 className="display text-[36px] leading-[1.04] text-ink md:text-[48px]">
-            <Link href={`/locality/${l.slug}`} className="transition-colors hover:text-accent">
-              {l.name}
-            </Link>
-          </h2>
-          <p className="mt-4 max-w-[46ch] text-[16px] leading-relaxed text-muted">{l.summary}</p>
-
-          <dl className="mt-8 grid max-w-[30rem] grid-cols-2 gap-x-8 gap-y-5 border-t border-line pt-6 sm:grid-cols-4">
-            <Stat label="₹ / sq.ft" value={formatPriceSqft(l.avgPriceSqft)} />
-            <Stat label="Median" value={formatPrice(l.medianPrice)} />
-            <Stat label="Homes" value={formatCount(l.inventoryCount)} />
-            <Stat
-              label="1 yr"
-              value={`+${l.momentumPct}%`}
-              tone={l.momentumPct > 0 ? "up" : undefined}
-            />
-          </dl>
-
-          <Link
-            href={`/locality/${l.slug}`}
-            className="group mt-7 inline-flex items-center gap-1.5 text-[15px] text-ink transition-colors hover:text-accent"
-          >
-            Read the locality report
-            <ArrowUpRight
-              size={15}
-              strokeWidth={2}
-              className="text-accent transition-transform duration-[180ms] group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-            />
-          </Link>
+  return <>
+    <div className={styles.toolbar}>
+      <p role="status" className={styles.count}><strong>{matches.length}</strong> {matches.length === 1 ? "locality" : "localities"}{corridor && ` · ${corridor} Hyderabad`}</p>
+      <div className={styles.toolbarActions}>
+        <Button className={styles.mobileToggle} size="sm" aria-expanded={mobileFilters} aria-controls="locality-filters" onClick={() => setMobileFilters(!mobileFilters)}><SlidersHorizontal size={14} /> Filters</Button>
+        <div className={styles.sort}><select aria-label="Sort localities" value={sort} onChange={(event) => { setSort(event.target.value); setShown(12); }}><option value="inventory">Most properties</option><option value="price_asc">Price: low to high</option><option value="price_desc">Price: high to low</option><option value="momentum">Price movement</option></select><ChevronDown size={14} aria-hidden="true" /></div>
+      </div>
+    </div>
+    <div className={styles.layout}>
+      <aside id="locality-filters" aria-label="Locality filters" className={cn(styles.sidebar, mobileFilters && styles.sidebarOpen)}>
+        <div className={styles.sidebarHeader}><h2>Filters</h2><button type="button" className={styles.reset} onClick={reset}>Reset all</button></div>
+        <div className={styles.fields}>
+          <label className={styles.field}><span>Locality name</span><input type="search" aria-label="Locality name" placeholder="Find a neighbourhood" value={query} onChange={(event) => { setQuery(event.target.value); setShown(12); }} /></label>
+          <label className={styles.field}><span>Hyderabad corridor</span><select aria-label="Hyderabad corridor" value={corridor} onChange={(event) => { setCorridor(event.target.value); setShown(12); }}><option value="">All corridors</option>{corridors.map((name) => <option key={name}>{name}</option>)}</select><ChevronDown size={13} aria-hidden="true" /></label>
+          <label className={styles.field}><span>Average price per sq.ft</span><select aria-label="Average price per sq.ft" value={rate} onChange={(event) => { setRate(event.target.value); setShown(12); }}><option value="">Any price</option>{[6000, 10000, 15000].map((price) => <option key={price} value={price}>Up to ₹{price.toLocaleString("en-IN")}</option>)}</select><ChevronDown size={13} aria-hidden="true" /></label>
         </div>
-      </article>
-    </Reveal>
-  );
-}
-
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "up" }) {
-  return (
-    <div>
-      <dt className="eyebrow mb-1">{label}</dt>
-      <dd
-        className={cn(
-          "tnum text-[17px] font-medium",
-          tone === "up" ? "text-accent" : "text-ink",
-        )}
-      >
-        {value}
-      </dd>
+        <p className={styles.notice}>Prices and movement are modelled from demo inventory.</p>
+        <Button variant="primary" className={cn(styles.mobileToggle, "mt-5 w-full")} onClick={showResults}>Show {matches.length} {matches.length === 1 ? "locality" : "localities"}</Button>
+      </aside>
+      <section ref={resultsRef} aria-label="Locality results" className={styles.results}>
+        {matches.length ? <>
+          <div className={styles.grid}>{matches.slice(0, shown).map((locality) => (
+            <article key={locality.id} className={styles.item}>
+              <Link href={`/locality/${locality.slug}`}>
+                <Img src={locality.heroImage} alt="" className={styles.localityImage} sizes="(max-width: 540px) 95vw, (max-width: 1250px) 45vw, 28vw" />
+                <div className={styles.localityHeading}><small>{locality.corridor}</small><h2>{locality.name}</h2></div>
+              </Link>
+              <p className={styles.summary}>{locality.summary}</p>
+              <dl className={styles.stats}>
+                <div><dt>Average price</dt><dd>{formatPriceSqft(locality.avgPriceSqft)}</dd></div>
+                <div><dt>Median home</dt><dd>{formatPrice(locality.medianPrice)}</dd></div>
+                <div><dt>Properties</dt><dd>{formatCount(locality.inventoryCount)}</dd></div>
+                <div><dt>1-year movement</dt><dd>{locality.momentumPct > 0 ? "+" : ""}{locality.momentumPct}%</dd></div>
+              </dl>
+              <div className={styles.itemFooter}><Link href={`/locality/${locality.slug}`}>Locality details</Link><Link href={`/search?type=buy&locality=${locality.slug}`} aria-label={`View homes in ${locality.name}`}><MapPin size={13} aria-hidden="true" /> View homes</Link></div>
+            </article>
+          ))}</div>
+          <p className={styles.notice}>Showing {Math.min(shown, matches.length)} of {matches.length} localities.</p>
+          {shown < matches.length && <div className={styles.loadMore}><Button onClick={() => setShown(shown + 12)}>Show more localities</Button></div>}
+        </> : <div className={styles.empty}><h2>No matching localities</h2><p>Try another name, corridor or price range.</p><Button onClick={reset}>Clear filters</Button></div>}
+      </section>
     </div>
-  );
-}
-
-function CorridorTable({
-  localities,
-  highlighted,
-}: {
-  localities: Locality[];
-  highlighted: Set<string>;
-}) {
-  const router = useRouter();
-  const { setFilters, setUseBounds, selectLocality, flyTo } = useDiscovery();
-
-  function open(l: Locality) {
-    setUseBounds(false);
-    setFilters({ localitySlugs: [l.slug] });
-    selectLocality(l.slug);
-    flyTo(l.center, 13);
-    router.push("/search");
-  }
-
-  return (
-    /*
-      The table scrolls inside its own box, never the page.
-
-      At 375px this ran to 608px and took the whole document with it, so every
-      section on the page panned sideways — the one mobile failure that makes a
-      site feel broken rather than cramped. The column hiding below was already
-      in place and was not enough: an auto-layout table sizes to its content,
-      and the locality cell's `max-w-[46ch]` is about 460px at this font size,
-      so it inflated the table on its own.
-
-      Both halves are fixed here — the cell is capped far tighter on small
-      screens, and this wrapper is the floor that guarantees the page itself
-      never moves. It is the same pattern the compare table uses.
-    */
-    <div className="scroll-quiet -mx-5 overflow-x-auto px-5 md:mx-0 md:px-0">
-      <table className="w-full border-collapse text-left">
-        <thead>
-          <tr className="border-b border-line">
-            <th className="eyebrow py-2.5 font-medium">Locality</th>
-            <th className="eyebrow py-2.5 text-right font-medium">₹ / sq.ft</th>
-            <th className="eyebrow hidden py-2.5 text-right font-medium sm:table-cell">1 yr</th>
-            <th className="eyebrow py-2.5 text-right font-medium">Homes</th>
-            <th className="eyebrow hidden py-2.5 text-right font-medium md:table-cell">Projects</th>
-          </tr>
-        </thead>
-        <tbody>
-          {localities.map((l) => (
-            <tr
-              key={l.id}
-              onMouseEnter={() => flyTo(l.center, 12.4)}
-              className="group border-b border-line transition-colors duration-[160ms] hover:bg-sunk"
-            >
-              <td className="py-4 pr-4">
-                <button onClick={() => open(l)} className="block max-w-[24ch] text-left sm:max-w-[46ch]">
-                  <span className="display flex items-center gap-2 text-[20px] leading-tight text-ink transition-colors group-hover:text-accent md:text-[24px]">
-                    {l.name}
-                    {highlighted.has(l.slug) && (
-                      <span className="eyebrow rounded-full border border-[var(--accent-line)] px-2 py-0.5 text-[9px] text-accent">
-                        Featured
-                      </span>
-                    )}
-                  </span>
-                  <span className="mt-1 block truncate text-[13px] text-muted">{l.character}</span>
-                </button>
-              </td>
-              <td className="tnum py-4 text-right text-[15px] text-ink">
-                {formatPriceSqft(l.avgPriceSqft)}
-              </td>
-              <td className="tnum hidden py-4 text-right text-[15px] sm:table-cell">
-                <span className={l.momentumPct >= 0 ? "text-accent" : "text-[var(--data-clay)]"}>
-                  <TrendingUp
-                    size={11}
-                    strokeWidth={2}
-                    className="mr-1 inline-block align-[-1px]"
-                    aria-hidden
-                  />
-                  {l.momentumPct >= 0 ? "+" : ""}
-                  {l.momentumPct}%
-                </span>
-              </td>
-              <td className="tnum py-4 text-right text-[15px] text-muted">
-                {formatCount(l.inventoryCount)}
-              </td>
-              <td className="tnum hidden py-4 text-right text-[15px] text-muted md:table-cell">
-                {l.projectCount}
-              </td>
-            </tr>
-          ))}
-          </tbody>
-      </table>
-    </div>
-  );
+  </>;
 }
