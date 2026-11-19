@@ -326,7 +326,7 @@ export function PropertyDetail({
 
         {/* ---- Sticky price rail ---- */}
         <aside className="lg:sticky lg:top-[92px] lg:h-fit">
-          <div className="rounded-[var(--r-lg)] border border-line bg-raised p-5 shadow-[var(--e1)]">
+          <div className="luxury-surface rounded-[var(--r-lg)] border border-line p-5 shadow-e2">
             <div className="flex items-baseline gap-2">
               <span className="tnum text-[30px] font-semibold tracking-tight text-ink">{price}</span>
             </div>

@@ -31,16 +31,17 @@ export async function GET(req: Request) {
     }
   }
 
-  const filters = filtersSchema.parse({
+  const filters = filtersSchema.safeParse({
     listingType: sp.get("type") ?? "buy",
     priceMin: sp.get("minPrice") ? Number(sp.get("minPrice")) : null,
     priceMax: sp.get("maxPrice") ? Number(sp.get("maxPrice")) : null,
     propertyTypes: (sp.get("propertyType") ?? "").split(",").filter(Boolean),
   });
+  if (!filters.success) return NextResponse.json({ error: "Invalid property filters." }, { status: 400 });
 
   // Preserve the caller's ordering — it is the user's own list order.
   const items: ScoredProperty[] = getPropertiesByIds(ids).map((p) => {
-    const s = scoreProperty(p, anchors, { ...DEFAULT_FILTERS, ...filters });
+    const s = scoreProperty(p, anchors, { ...DEFAULT_FILTERS, ...filters.data });
     return {
       ...p,
       fitScore: s.fitScore,

@@ -864,6 +864,8 @@ export function PropitMap({
       <Map
         ref={mapRef}
         mapStyle={style}
+        // The source-free fallback cannot be diffed into the vector basemap.
+        styleDiffing={false}
         initialViewState={initialCenter
           ? { latitude: initialCenter.lat, longitude: initialCenter.lng, zoom: 15 }
           : openingBounds

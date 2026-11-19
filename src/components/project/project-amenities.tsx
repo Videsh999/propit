@@ -40,7 +40,7 @@ export function ProjectAmenities({ amenities }: { amenities: string[] }) {
         className="grid gap-1.5 sm:gap-2.5" style={{ gridTemplateColumns: `repeat(${groups.length}, minmax(0, 1fr))` }}>
         {groups.map(({ id, label, icon: Icon, items }) => (
           <button key={id} type="button" aria-pressed={active.id === id} onClick={() => setSelectedId(id)}
-            className="flex min-h-24 min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-line bg-paper px-1.5 py-3 text-center transition-colors hover:border-accent aria-pressed:border-transparent aria-pressed:bg-inverse aria-pressed:text-ink-inverse sm:px-3">
+            className="flex min-h-24 min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl border border-line bg-paper px-1.5 py-3 text-center text-muted transition-colors hover:border-accent aria-pressed:border-accent/35 aria-pressed:bg-accent-wash aria-pressed:text-accent sm:px-3">
             <Icon size={20} strokeWidth={1.65} aria-hidden="true" />
             <span className="text-xs font-semibold leading-tight">{label}</span>
             <span className="text-[11px] opacity-80">{items.length} {items.length === 1 ? "amenity" : "amenities"}</span>

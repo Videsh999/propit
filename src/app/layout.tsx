@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { DM_Sans, Instrument_Serif } from "next/font/google";
 import { Suspense } from "react";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import "./globals.css";
@@ -12,19 +12,16 @@ import { Footer } from "@/components/nav/footer";
 import { CommandPalette } from "@/components/search/command-palette";
 import { AssistantRail } from "@/components/ai/assistant-rail";
 
-/**
- * One family for everything, the way Apple does it.
- *
- * SF Pro is not licensed for the web, so this is Inter — the substitute it was
- * more or less drawn to be, and the one that holds up at both 76px display and
- * 11px tabular figures. It is exposed as `--font-inter` rather than
- * `--font-sans` because the stylesheet's `@theme` layer already owns that name
- * — pointing it at itself would be circular and silently drop the family.
- * Headings differ from body by weight and tracking now, not by family.
- */
-const inter = Inter({
+// Self-hosted, with fallback metrics supplied by next/font to limit layout shift.
+const dmSans = DM_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-dm-sans",
+  display: "swap",
+});
+const editorial = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-instrument-serif",
   display: "swap",
 });
 
@@ -52,8 +49,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F7F4EC" },
-    { media: "(prefers-color-scheme: dark)", color: "#16221C" },
+    { media: "(prefers-color-scheme: light)", color: "#F7F8F5" },
+    { media: "(prefers-color-scheme: dark)", color: "#182724" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -62,7 +59,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={`${dmSans.variable} ${editorial.variable}`} suppressHydrationWarning>
       <body>
         <NuqsAdapter>
           <Providers>

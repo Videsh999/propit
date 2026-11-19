@@ -8,22 +8,15 @@ type Size = "sm" | "md" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "bg-accent text-[var(--accent-ink)] hover:bg-accent-hover active:translate-y-px shadow-[0_1px_2px_rgba(0,0,0,0.12)]",
+    "border border-accent bg-accent bg-[image:linear-gradient(145deg,#ffffff16,transparent)] text-[var(--accent-ink)] hover:bg-accent-hover active:translate-y-px shadow-e1",
   secondary:
-    "bg-raised text-ink border border-line hover:border-line-strong hover:bg-sunk active:translate-y-px",
+    "bg-raised text-ink border border-line shadow-e1 hover:border-line-strong hover:bg-sunk active:translate-y-px",
   ghost: "text-ink hover:bg-sunk active:translate-y-px",
   quiet: "text-muted hover:text-ink hover:bg-sunk",
   inverse: "bg-inverse text-[var(--ink-inverse)] hover:opacity-90 active:translate-y-px",
 };
 
-/**
- * Pills at every size.
- *
- * Apple's controls are fully rounded regardless of height, and the horizontal
- * padding grows with the radius so the label never crowds the curve. This is
- * the single change that most makes a button read as "Apple" rather than
- * "bootstrap with nicer colours".
- */
+// Shared control dimensions keep actions consistent across cards and panels.
 const SIZES: Record<Size, string> = {
   sm: "h-8 px-3.5 text-[13px] gap-1.5 rounded-[var(--r-pill)]",
   md: "h-10 px-5 text-[14px] gap-2 rounded-[var(--r-pill)]",

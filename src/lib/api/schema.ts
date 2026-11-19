@@ -37,11 +37,12 @@ export const latLngSchema = z.object({
 });
 
 export const boundsSchema = z.object({
-  west: z.number(),
-  south: z.number(),
-  east: z.number(),
-  north: z.number(),
-});
+  west: z.number().min(-180).max(180),
+  south: z.number().min(-90).max(90),
+  east: z.number().min(-180).max(180),
+  north: z.number().min(-90).max(90),
+}).refine((bounds) => bounds.west <= bounds.east && bounds.south <= bounds.north,
+  { message: "Viewport coordinates are reversed." });
 
 export const filtersSchema = z.object({
   listingType: listingTypeSchema.default("buy"),
@@ -102,10 +103,8 @@ export function parsePropertyQuery(sp: URLSearchParams) {
   const south = num("south");
   const east = num("east");
   const north = num("north");
-  const bounds =
-    west != null && south != null && east != null && north != null
-      ? { west, south, east, north }
-      : null;
+  const bounds = ["west", "south", "east", "north"].some((key) => sp.has(key))
+    ? boundsSchema.parse({ west, south, east, north }) : null;
 
   const filters = filtersSchema.parse({
     listingType: sp.get("type") ?? "buy",
@@ -127,8 +126,8 @@ export function parsePropertyQuery(sp: URLSearchParams) {
   return {
     filters,
     bounds,
-    center: lat != null && lng != null ? { lat, lng } : null,
-    radiusKm: num("radiusKm"),
+    center: sp.has("lat") || sp.has("lng") ? latLngSchema.parse({ lat, lng }) : null,
+    radiusKm: sp.has("radiusKm") ? z.number().positive().max(60).parse(num("radiusKm")) : null,
     zoom: num("zoom") ?? 11,
     limit: Math.min(Math.max(num("limit") ?? 40, 0), 100),
     offset: Math.max(num("offset") ?? 0, 0),

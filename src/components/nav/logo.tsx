@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { PropitMark } from "@/components/nav/propit-mark";
 import { cn } from "@/lib/utils";
@@ -26,7 +28,7 @@ export function Logo({
 }) {
   const S = {
     sm: { mark: "h-6 w-6", text: "text-[17px]", gap: "gap-2" },
-    md: { mark: "h-7 w-7", text: "text-[21px]", gap: "gap-2.5" },
+    md: { mark: "h-8 w-8", text: "text-[23px]", gap: "gap-2.5" },
     lg: { mark: "h-9 w-9", text: "text-[26px]", gap: "gap-3" },
   }[size];
 
@@ -47,7 +49,7 @@ export function Logo({
 
   if (href === null) return lockup;
   return (
-    <Link href={href} aria-label="PropIT home" className="shrink-0">
+    <Link href={href} aria-label="PropIT home" className="shrink-0" onNavigate={() => { document.body.scrollTop = 0; }}>
       {lockup}
     </Link>
   );

@@ -55,9 +55,9 @@ export function ComparePicker({ onClose }: { onClose: () => void }) {
   return (
     <dialog ref={dialogRef} aria-labelledby="compare-picker-title"
       onCancel={(event) => { event.preventDefault(); onClose(); }}
-      className="fixed inset-0 m-auto w-[calc(100%-24px)] max-w-[560px] overflow-hidden rounded-3xl border border-line bg-raised p-0 text-ink shadow-e3 backdrop:bg-black/45">
-      <div className="flex max-h-[min(700px,calc(100dvh-24px))] flex-col">
-        <header className="shrink-0 border-b border-line px-4 pb-3 pt-4 sm:px-6">
+      className="fixed inset-0 m-auto w-[calc(100%-24px)] max-w-[560px] overflow-hidden rounded-3xl border border-line bg-raised p-0 text-ink shadow-e3 backdrop:bg-accent-deep/25 backdrop:backdrop-blur-sm">
+      <div className="flex h-[min(700px,calc(100dvh-24px))] flex-col">
+        <header className="luxury-surface shrink-0 border-b border-line px-4 pb-3 pt-4 sm:px-6">
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
               <h2 id="compare-picker-title" className="font-[family-name:var(--font-editorial)] text-[30px] leading-none tracking-tight sm:text-[36px]">Add a property</h2>

@@ -47,8 +47,9 @@ export async function GET(
   ctx: { params: Promise<{ stack: string; range: string }> },
 ) {
   const { stack, range } = await ctx.params;
-  const name = decodeURIComponent(stack);
-  const file = decodeURIComponent(range);
+  // Next supplies decoded route parameters. Decoding again breaks literal '%' paths.
+  const name = stack;
+  const file = range;
 
   // Defend the read: these segments come from the URL.
   if (!/^[\w .-]+$/.test(name) || !/^\d+-\d+\.pbf$/.test(file)) {

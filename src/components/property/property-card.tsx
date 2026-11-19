@@ -42,8 +42,8 @@ export function PropertyCard({
         flyTo(property.location, 15.2, -180);
       }}
       className={cn(
-        "group relative cursor-pointer border-b border-line px-4 py-4 transition-colors duration-[160ms]",
-        isSelected ? "bg-[var(--accent-wash)]" : isHovered ? "bg-sunk" : "bg-transparent",
+        "group relative cursor-pointer border-b border-line px-4 py-5 transition-colors duration-[160ms]",
+        isSelected ? "bg-accent-wash" : isHovered ? "bg-paper" : "bg-raised",
       )}
     >
       <div className={cn("flex gap-3 sm:gap-4", compact && "sm:gap-3")}>

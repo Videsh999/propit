@@ -47,7 +47,7 @@ export function DiscoveryView({
   const {
     setBounds, viewMode, anchors, filters, select,
     selectedLocalitySlug, selectedPropertyId, saveSearch, savedSearches,
-    radius, setRadius, sort, setSort, setFiltersOpen, setAnchorsOpen, setAssistantOpen,
+    radius, setRadius, sort, setSort, setFiltersOpen, setAnchorsOpen, setAssistantOpen, setViewMode,
   } = useDiscovery();
 
   const { data: queryData, isLoading: queryLoading, isPlaceholderData, isError, error, refetch } = useProperties({ limit: 40 });
@@ -264,6 +264,10 @@ export function DiscoveryView({
             showMap ? "w-full max-w-[420px] shrink-0" : "w-full",
           )}
         >
+          {!showMap && <div className="flex justify-end gap-2 border-b border-line px-4 py-2">
+            <Button size="sm" onClick={() => setViewMode("split")}>Map and list</Button>
+            <Button size="sm" onClick={() => setViewMode("map")}>Map only</Button>
+          </div>}
           {resultsHeader}
           <div ref={listRef} className="scroll-quiet min-h-0 flex-1 overflow-y-auto">
             {resultsList}

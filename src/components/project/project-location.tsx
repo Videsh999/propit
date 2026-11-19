@@ -95,26 +95,26 @@ function TravelDiagram({ name, origin, places, selected, onSelect }: {
   });
 
   return (
-    <figure className="min-w-0 self-start rounded-xl border border-[#344a3e] bg-[#1b3128] px-3 pb-3 pt-3 text-[#fffaf0]">
+    <figure className="luxury-surface min-w-0 self-start rounded-2xl border border-line px-3 pb-3 pt-4 text-ink">
       <figcaption className="flex items-center justify-between gap-2 px-1 text-xs font-semibold">
         <span>Drive time from {name}</span>
-        <span aria-hidden="true" className="shrink-0 text-[11px] text-[#bbc9be]">↑ N</span>
+        <span aria-hidden="true" className="shrink-0 text-[11px] text-muted">↑ N</span>
       </figcaption>
       <div className="relative mx-auto aspect-square max-w-[310px]">
         <svg aria-hidden="true" className="absolute inset-0 size-full" viewBox="0 0 100 100">
-          <path d="M 50 8 V 92 M 8 50 H 92" fill="none" stroke="#365447" strokeWidth=".2" />
+          <path d="M 50 8 V 92 M 8 50 H 92" fill="none" stroke="var(--line-strong)" strokeWidth=".2" />
           {[ceiling, ceiling / 2, ceiling / 4].map((time) => (
             <g key={time}>
-              <circle cx="50" cy="50" r={radius(time)} fill="none" stroke="#759485" strokeWidth=".28" strokeDasharray=".45 1.2" />
-              <text x="52" y={49 - radius(time)} fill="#bbc9be" fontSize="3.1">{time} min</text>
+              <circle cx="50" cy="50" r={radius(time)} fill="none" stroke="var(--accent-line)" strokeWidth=".28" strokeDasharray=".45 1.2" />
+              <text x="52" y={49 - radius(time)} fill="var(--ink-muted)" fontSize="3.1">{time} min</text>
             </g>
           ))}
           {points.map(({ place, x, y }) => (
             <path key={place.id} d={`M 50 50 L ${x} ${y}`} fill="none"
-              stroke={place.id === selected.id ? "#f4ce83" : "#819e8e"} strokeWidth={place.id === selected.id ? ".55" : ".25"} />
+              stroke={place.id === selected.id ? "var(--data-brass)" : "var(--accent-line)"} strokeWidth={place.id === selected.id ? ".55" : ".25"} />
           ))}
         </svg>
-        <span className="pointer-events-none absolute left-1/2 top-1/2 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#f4ce83]/50 bg-[#1b3128] text-[#f4ce83]" aria-hidden="true">
+        <span className="pointer-events-none absolute left-1/2 top-1/2 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-accent/40 bg-raised text-accent shadow-e2" aria-hidden="true">
           <MapPin size={14} />
         </span>
         {points.map(({ place, x, y }) => (
@@ -122,15 +122,15 @@ function TravelDiagram({ name, origin, places, selected, onSelect }: {
             aria-label={`Highlight ${place.name}`} title={place.name} onClick={() => onSelect(place.id)}
             style={{ left: `${x}%`, top: `${y}%` }}
             className="absolute grid size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full hover:z-20 focus-visible:z-20 aria-pressed:z-10">
-            <span className={`size-2.5 rounded-full border border-[#1b3128] ${place.id === selected.id ? "bg-[#f4ce83] ring-4 ring-[#f4ce83]/25" : "bg-[#a8c4b2]"}`} />
+            <span className={`size-2.5 rounded-full border border-raised ${place.id === selected.id ? "bg-brass ring-4 ring-brass/15" : "bg-accent"}`} />
           </button>
         ))}
       </div>
-      <p className="flex min-h-10 items-center justify-between gap-2 rounded-md border border-[#547263] bg-[#263e33] px-2.5 py-1.5 text-xs">
+      <p className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-line bg-raised/80 px-2.5 py-2 text-xs">
         <span className="min-w-0 break-words">{selected.name}</span>
-        <span className="tnum shrink-0 font-semibold text-[#f4ce83]">~{formatMinutes(Math.max(1, selected.minutes))}</span>
+        <span className="tnum shrink-0 font-semibold text-accent">~{formatMinutes(Math.max(1, selected.minutes))}</span>
       </p>
-      <p className="mt-2 px-1 text-[11px] text-[#bbc9be]">Dots show direction and estimated time.</p>
+      <p className="mt-2 px-1 text-[11px] text-muted">Dots show direction and estimated time.</p>
     </figure>
   );
 }

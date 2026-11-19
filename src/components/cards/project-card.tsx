@@ -13,7 +13,7 @@ export function ProjectCard({
   size?: "md" | "lg";
 }) {
   return (
-    <Link href={`/project/${project.slug}`} className="group block">
+    <Link href={`/project/${project.slug}`} className="group block overflow-hidden rounded-[var(--r-lg)] border border-line bg-raised p-2.5 shadow-e1 transition-shadow hover:shadow-e2">
       <Img
         src={project.heroImage}
         alt={project.name}
@@ -21,14 +21,14 @@ export function ProjectCard({
         className={`w-full rounded-[var(--r-md)] ${size === "lg" ? "aspect-[4/3]" : "aspect-[16/11]"}`}
         sizes="(max-width: 768px) 100vw, 33vw"
       />
-      <div className="mt-3.5">
+      <div className="px-2 pb-3 pt-4">
         <div className="flex flex-wrap items-center gap-2">
           <Tag>{projectStatusLabel(project.status)}</Tag>
           {project.profile?.type && <Tag>{project.profile.type}</Tag>}
           {project.profile?.category && <Tag>{project.profile.category}</Tag>}
           {project.reraVerified && <QualityBadge quality="verified" label="RERA" />}
         </div>
-        <h3 className="mt-2 text-[17px] font-medium leading-snug text-ink transition-colors group-hover:text-accent">
+        <h3 className="mt-3 font-[family-name:var(--font-editorial)] text-[29px] leading-snug text-ink transition-colors group-hover:text-accent">
           {project.name}
         </h3>
         <p className="mt-0.5 text-[13px] text-muted">

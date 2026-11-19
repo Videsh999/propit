@@ -241,9 +241,9 @@ export function AssistantRail() {
     <>
       {!assistantOpen && (
         <button type="button" onClick={() => setAssistantOpen(true)}
-          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[45] inline-flex size-11 items-center justify-center gap-2 rounded-full min-[480px]:h-12 min-[480px]:w-auto min-[480px]:px-4 border border-[#326450] bg-[#153e30] text-sm font-semibold text-white shadow-[0_6px_24px_#102e2a38] transition-colors hover:bg-[#245640] sm:bottom-6 sm:right-6"
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[45] inline-flex size-12 items-center justify-center gap-2.5 rounded-full border border-accent/60 bg-accent bg-[image:linear-gradient(135deg,#ffffff20,transparent)] text-sm font-medium text-accent-ink shadow-e3 transition-[background-color,transform] hover:bg-accent-hover motion-safe:hover:-translate-y-0.5 min-[480px]:h-[52px] min-[480px]:w-auto min-[480px]:px-5 sm:bottom-6 sm:right-6"
           aria-label="Ask PropIT" aria-controls="propit-assistant" aria-expanded={false}>
-          <MessageCircle size={17} aria-hidden="true" className="text-[#bce6d1]" /><span className="hidden min-[480px]:inline">Ask PropIT</span>
+          <MessageCircle size={18} strokeWidth={1.7} aria-hidden="true" /><span className="hidden min-[480px]:inline">Ask PropIT</span>
         </button>
       )}
       <AnimatePresence>
@@ -254,13 +254,13 @@ export function AssistantRail() {
           exit={{ x: 24, opacity: 0 }}
           transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
           id="propit-assistant"
-          className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[70] flex h-[min(640px,calc(100dvh_-_3rem_-_env(safe-area-inset-bottom)))] w-[calc(100%_-_24px)] max-w-[390px] flex-col overflow-hidden rounded-2xl border border-line bg-paper shadow-[var(--e3)] sm:bottom-6 sm:right-6"
+          className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[70] flex h-[min(640px,calc(100dvh_-_3rem_-_env(safe-area-inset-bottom)))] w-[calc(100%_-_24px)] max-w-[390px] flex-col overflow-hidden rounded-[28px] border border-line bg-paper shadow-e3 sm:bottom-6 sm:right-6"
           aria-label="PropIT assistant"
           onKeyDown={(event) => {
             if (event.key === "Escape") setAssistantOpen(false);
           }}
         >
-          <header className="flex items-center justify-between border-b border-line px-5 py-4">
+          <header className="luxury-surface flex items-center justify-between border-b border-line px-5 py-4">
             <div className="flex min-w-0 items-center gap-2">
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent text-[var(--accent-ink)]">
                 <MessageCircle size={13} strokeWidth={2} />

@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   try {
-    const { query, context } = naturalRequestSchema.parse(await req.json());
+    const { query, context } = naturalRequestSchema.parse(await req.json().catch(() => null));
     const store = getStore();
     const localityNames = store.localities.map((l) => l.name);
     const parsed = parseQuery(query, localityNames);
@@ -51,15 +51,19 @@ export async function POST(req: Request) {
       }
     }
 
-    const filters = { ...(context.filters ?? {}), ...parsed.filters };
+    const previous = context.filters ?? {};
+    const switchedIntent = parsed.filters.listingType && parsed.filters.listingType !== (previous.listingType ?? "buy");
+    const filters = { ...previous, ...(switchedIntent ? { priceMin: null, priceMax: null } : {}), ...parsed.filters };
     const anchors: Anchor[] = context.anchors ?? [];
 
     // "near X" means proximity, not "inside X" — default to a 5 km ring when
     // the query says near but names no distance. "in X" scopes by boundary.
     const NEAR_DEFAULT_KM = 5;
-    const radiusKm = parsed.radiusKm ?? (parsed.nearPlace && target ? NEAR_DEFAULT_KM : null);
+    const requestedRadius = parsed.radiusKm ?? (parsed.nearPlace && target ? NEAR_DEFAULT_KM : null);
+    const radiusKm = requestedRadius == null ? null : Math.min(60, Math.max(0.2, requestedRadius));
     const center = target?.location ?? context.center ?? null;
 
+    if (radiusKm && target) filters.localitySlugs = [];
     if (parsed.localityMentions.length && !radiusKm) {
       filters.localitySlugs = parsed.localityMentions
         .map((n) => store.localities.find((l) => l.name === n)?.slug)

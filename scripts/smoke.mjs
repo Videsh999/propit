@@ -30,6 +30,18 @@ const post = async (p, body) => {
   return { status: r.status, json: r.ok ? await r.json() : null };
 };
 
+const ask = async (content, context = {}) => {
+  const response = await fetch(BASE + "/api/ai/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages: [{ role: "user", content }], context }),
+  });
+  const events = (await response.text()).split("\n\n")
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => JSON.parse(line.slice(5)));
+  return { status: response.status, events };
+};
+
 console.log("\nFILTERS");
 const all = await get("/api/properties?type=buy&limit=1");
 expect(all.json?.total > 500, `inventory loaded (${all.json?.total} homes)`);
@@ -161,23 +173,48 @@ expect(intel.json.nearby.length > 0 && intel.json.connectivity.length > 0, "near
 expect((await get("/api/localities/atlantis/intelligence")).status === 404, "unknown locality 404s cleanly");
 
 console.log("\nASSISTANT");
-const chat = await fetch(BASE + "/api/ai/chat", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    messages: [{ role: "user", content: "My office is in Financial District" }],
-    context: { filters: { listingType: "buy" }, anchors: [] },
-  }),
-});
-const stream = await chat.text();
-const events = stream
-  .split("\n\n")
-  .filter((l) => l.startsWith("data:"))
-  .map((l) => { try { return JSON.parse(l.slice(5)); } catch { return null; } })
-  .filter(Boolean);
+const chat = await ask("My office is in Financial District", { filters: { listingType: "buy" }, anchors: [] });
+const { events } = chat;
 expect(chat.status === 200, "assistant streams a response");
 expect(events.some((e) => e.type === "action" && e.action.type === "add_anchor"), "assistant places an anchor on the map");
 expect(events.some((e) => e.type === "text"), "assistant returns prose");
+expect(events.at(-1)?.type === "done" && !events.some((e) => e.type === "error"), "assistant completes the stream without an error");
+const projectChat = await ask("Summarize this project", { projectSlug: "verdant-sanctuary" });
+expect(projectChat.events.some((e) => e.type === "sources" && e.sources.some((s) => s.href === "/project/verdant-sanctuary")),
+  "project answers link to the project's source");
+const reraChat = await ask("How do I check RERA?");
+expect(reraChat.events.some((e) => e.type === "sources" && e.sources.some((s) => s.kind === "official" && s.href.startsWith("https://rerait.telangana.gov.in/"))),
+  "RERA answers link to the official registry");
+
+console.log("\nCOMPARISON");
+const shortlist = await get("/api/properties/compare-search?q=3BHK%20Gachibowli&type=rent");
+expect(shortlist.status === 200 && shortlist.json.items.length > 0 &&
+  shortlist.json.items.every((item) => item.listingType === "rent" && item.locality === "Gachibowli"),
+  "comparison search respects locality and rental filters");
+const selectedIds = [all.json.items[0].id, rent.json.items[0].id];
+const selected = await get("/api/properties/by-id?ids=" + encodeURIComponent(selectedIds.join(",")));
+expect(selected.status === 200 && selected.json.items.map(({ id }) => id).join(",") === selectedIds.join(","),
+  "comparison details preserve the selected listing order");
+
+console.log("\nINPUT VALIDATION");
+const world = "?west=-180&south=-90&east=180&north=90";
+const worldResults = await get("/api/properties" + world + "&limit=0&clusters=0");
+expect(worldResults.status === 200 && worldResults.json.total === all.json.total && !worldResults.json.clusters.length,
+  "world bounds return the complete inventory without a large grid scan");
+const worldPoi = await get("/api/poi/viewport" + world + "&categories=school");
+expect(worldPoi.status === 200 && worldPoi.json.places.length > 0, "world POI bounds return safely");
+for (const endpoint of [
+  "/api/poi/viewport", "/api/poi/nearby", "/api/properties?west=4",
+  "/api/properties?lat=17.4&lng=78.4&radiusKm=100000",
+  "/api/properties/by-id?ids=" + encodeURIComponent(selectedIds[0]) + "&type=invalid",
+]) {
+  expect((await get(endpoint)).status === 400, `${endpoint.split("?")[0]} rejects invalid input`);
+}
+const invalidDate = await post("/api/meetings", {
+  name: "Smoke Test", phone: "9000000000", mode: "site",
+  date: "2099-02-30", slot: "morning",
+});
+expect(invalidDate.status === 400, "viewing requests reject impossible calendar dates");
 
 console.log("\nRENT VS BUY");
 const rvb = await get("/api/insights/rent-vs-buy?bedrooms=3");
@@ -206,6 +243,8 @@ const pages = [
   ["/", "Find where"],
   ["/search", "PropIT"],
   ["/projects", "Projects"],
+  ["/project/verdant-sanctuary", "Amenities &amp; clubhouse"],
+  ["/map-check", "PropIT"],
   ["/localities", "Kokapet"],
   ["/locality/kokapet", "PropIT estimate"],
   ["/sell", "Put it exactly where it is"],
@@ -224,6 +263,7 @@ const first = (await get("/api/properties?type=buy&limit=1")).json.items[0];
 const detail = await (await fetch(`${BASE}/property/${first.slug}`)).text();
 expect(detail.includes("Estimated EMI") && detail.includes("nearby"), "property detail renders fully server-side");
 expect((await fetch(BASE + "/property/nope")).status === 404, "unknown property 404s");
+expect((await fetch(BASE + "/project/nope")).status === 404, "unknown project 404s");
 
 console.log(`\n${failures === 0 ? "All checks passed." : `${failures} check(s) failed.`}\n`);
 process.exit(failures === 0 ? 0 : 1);

@@ -21,7 +21,7 @@ export function ScrollRestoration() {
     const body = document.body;
     const restore = historyTarget.current === pathname;
     historyTarget.current = null;
-    if (restore && !location.hash) body.scrollTop = positions.current.get(pathname) ?? 0;
+    if (!location.hash) body.scrollTop = restore ? positions.current.get(pathname) ?? 0 : 0;
     function remember() {
       positions.current.set(pathname, body.scrollTop);
     }

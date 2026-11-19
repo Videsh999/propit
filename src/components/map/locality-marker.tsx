@@ -48,7 +48,7 @@ export function LocalityMarker({
     >
       <span
         className={cn(
-          "flex items-center gap-2 rounded-full border py-1 shadow-[var(--e2)] backdrop-blur-sm",
+          "flex items-center gap-2 rounded-full border py-1 shadow-[var(--e1)]",
           compact ? "pl-1.5 pr-1.5" : "pl-3 pr-1.5",
           "transition-colors duration-[180ms]",
           // The design fills the pin with the deep green and lightens the badge,
@@ -82,8 +82,8 @@ export function LocalityMarker({
       <span
         className={cn(
           "pointer-events-none absolute left-1/2 top-[calc(100%+5px)] -translate-x-1/2 whitespace-nowrap",
-          "rounded-full border border-line bg-[color-mix(in_srgb,var(--paper-raised)_94%,transparent)] px-2 py-0.5",
-          "text-[10px] text-muted opacity-0 shadow-[var(--e1)] backdrop-blur-sm",
+          "rounded-full border border-line bg-raised px-2 py-0.5",
+          "text-[10px] text-muted opacity-0 shadow-[var(--e1)]",
           "transition-opacity duration-[180ms] group-hover:opacity-100",
         )}
       >

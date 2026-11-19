@@ -14,7 +14,7 @@ export function Footer() {
   if (pathname === "/search") return null;
 
   return (
-    <footer className="border-t border-line bg-sunk px-5 pb-20 pt-4 md:px-8 md:pb-5">
+    <footer className="border-t border-line bg-raised px-5 pb-20 pt-5 md:px-8 md:pb-5">
       <div className="mx-auto max-w-[1440px]">
         <div className="flex flex-wrap items-center gap-x-7 gap-y-2">
           <Logo size="sm" />

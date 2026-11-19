@@ -99,30 +99,29 @@ export function CompareView() {
 
   return (
     <div className="mx-auto max-w-[1320px] px-4 pb-24 pt-5 sm:px-8 sm:pt-8">
-      <header className="relative isolate overflow-hidden rounded-3xl border border-[#456051] bg-[#19362b] px-4 py-5 text-[#fffaf0] shadow-e2 sm:px-7 sm:py-7">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,#4b6c51_0%,transparent_62%)]" />
+      <header className="luxury-surface relative isolate overflow-hidden rounded-3xl border border-line px-4 py-5 text-ink shadow-e1 sm:px-7 sm:py-7">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div>
-            <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#d6e3d8]">
+            <p className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-accent">
               <Scale size={16} aria-hidden="true" /> Property comparison
             </p>
             <h1 className="font-[family-name:var(--font-editorial)] text-[clamp(34px,5vw,54px)] leading-none tracking-tight">
               Compare properties
             </h1>
-            <p className="mt-2 max-w-[52ch] text-sm text-[#d6e3d8]">
+            <p className="mt-3 max-w-[52ch] text-sm text-muted">
               Compare price, space and amenities for up to {MAX_COMPARE_PROPERTIES} listings.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {items.length >= 2 && (
-              <Button variant="ghost" className="border border-white/25 text-[#fffaf0] hover:bg-white/10"
+              <Button variant="secondary"
                 onClick={() => { setAssistantDraft("Compare my selected properties"); setAssistantOpen(true); }}>
                 <MessageCircle size={15} aria-hidden="true" /> Ask PropIT
               </Button>
             )}
             <Button variant="primary" type="button" disabled={!hydrated || full}
               aria-haspopup="dialog" onClick={() => setPickerOpen(true)}
-              className="bg-[#f1d8a6] font-semibold text-[#21352a] hover:bg-[#ffe7b9]">
+              className="font-semibold">
               <Plus size={17} aria-hidden="true" /> Add property
             </Button>
           </div>

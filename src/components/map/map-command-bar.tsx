@@ -184,6 +184,7 @@ function Tool({
   return (
     <button
       onClick={onClick}
+      aria-label={label}
       aria-pressed={active}
       className={cn(
         "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2 text-[12px] font-medium transition-colors sm:px-3",

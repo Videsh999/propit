@@ -24,7 +24,7 @@ export function PropertyPreview({ className, error = false, onRetry }: {
   );
   const close = (
     <button type="button" onClick={() => select(null)}
-      className="absolute right-2 top-2 z-10 grid size-9 place-items-center rounded-full border border-line bg-raised text-ink shadow-e1 hover:bg-sunk"
+      className="glass-panel absolute right-2 top-2 z-10 grid size-9 place-items-center rounded-full border text-ink hover:bg-sunk"
       aria-label="Close preview">
       <X size={16} strokeWidth={2} />
     </button>

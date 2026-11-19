@@ -27,8 +27,7 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 h-[72px] w-full border-b border-line",
-        "bg-paper text-ink",
+        "glass-panel sticky top-0 z-50 h-[72px] w-full border-b text-ink",
       )}
     >
       <nav className="mx-auto flex h-full max-w-[1440px] items-center gap-3 px-4 sm:px-5 lg:gap-7 lg:px-8">
@@ -43,7 +42,7 @@ export function Navbar() {
                   href={l.href}
                   className={cn(
                     "text-[14px] transition-colors duration-[160ms]",
-                    active ? "text-ink" : "text-muted hover:text-ink",
+                    active ? "text-accent" : "text-muted hover:text-accent",
                   )}
                 >
                   {l.label}
@@ -97,7 +96,7 @@ export function Navbar() {
       </nav>
 
       {mobileOpen && (
-        <div className="border-t border-line bg-paper px-5 py-3 md:hidden">
+        <div className="border-t border-line bg-raised px-5 py-3 shadow-e2 md:hidden">
           <ul className="grid gap-1">
             {LINKS.map((l) => (
               <li key={l.label}>

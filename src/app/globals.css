@@ -1,40 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #f7f4ec;
-  --paper-raised: #fffdf8;
-  --paper-sunk: #ede8dc;
-  --paper-inverse: #20352c;
-  --line: #ded7c9;
-  --line-strong: #b7ae9c;
+  --paper: #f7f8f5;
+  --paper-raised: #fffefb;
+  --paper-sunk: #ecefea;
+  --paper-inverse: #2d5149;
+  --line: #dde4de;
+  --line-strong: #aebfb6;
 
-  --ink: #22332b;
-  --ink-muted: #50594f;
-  --ink-faint: #62695e;
-  --ink-inverse: #fffaf0;
+  --ink: #263d38;
+  --ink-muted: #586b64;
+  --ink-faint: #65766e;
+  --ink-inverse: #f9fcf7;
 
-  --accent: #285640;
-  --accent-hover: #1c4432;
-  --accent-ink: #fffdf8;
-  --accent-deep: #192e25;
-  --accent-wash: #e6ede1;
-  --accent-line: #64836f;
+  --accent: #32665c;
+  --accent-hover: #284f48;
+  --accent-ink: #ffffff;
+  --accent-deep: #23463f;
+  --accent-wash: #e5efea;
+  --accent-line: #7faaa0;
 
-  --brand-forest: #203d30;
-  --brand-gold: #855d25;
-  --data-brass: #885a28;
-  --data-clay: #a03d35;
-  --data-sage: #337450;
-  --data-slate: #62695e;
+  --brand-forest: #2d5149;
+  --brand-gold: #98743f;
+  --data-brass: #8e6a34;
+  --data-clay: #a24f49;
+  --data-sage: #3e7762;
+  --data-slate: #65766e;
+  --champagne-wash: #f3eddf;
+  --lilac-wash: #eeedf4;
+  --glass: color-mix(in srgb, var(--paper-raised) 87%, transparent);
+  --glass-line: color-mix(in srgb, var(--paper-raised) 66%, var(--line));
+  --surface-sheen: linear-gradient(130deg, #ffffffb8, #ffffff18 58%);
 
-  --e1: 0 2px 5px #392b1510;
-  --e2: 0 10px 28px -10px #392b1528;
-  --e3: 0 20px 55px -16px #26382e50;
+  --e1: 0 2px 6px #294a3f08, 0 1px 2px #294a3f06;
+  --e2: 0 12px 32px -14px #36584c29, inset 0 1px 0 #ffffff80;
+  --e3: 0 22px 64px -24px #27483c42, 0 4px 14px #27483c0a;
 
   --r-sm: 8px;
-  --r-md: 14px;
-  --r-lg: 21px;
-  --r-canvas: 26px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --r-canvas: 28px;
   --r-pill: 980px;
 
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -42,16 +47,16 @@
   --t-panel: 320ms;
   --t-map: 700ms;
   --nav-h: 72px;
-  --font-editorial: "Instrument Serif", Georgia, serif;
+  --font-editorial: var(--font-instrument-serif), Georgia, serif;
 }
 
 [data-theme="dark"] {
-  --paper: #16221c;
-  --paper-raised: #203027;
-  --paper-sunk: #101a15;
-  --paper-inverse: #e8eee3;
-  --line: #394b40;
-  --line-strong: #627668;
+  --paper: #182724;
+  --paper-raised: #233630;
+  --paper-sunk: #14201d;
+  --paper-inverse: #dceae2;
+  --line: #3b5148;
+  --line-strong: #6e8a7c;
 
   --ink: #f6f0e4;
   --ink-muted: #d0d6c9;
@@ -71,6 +76,9 @@
   --data-clay: #f4998a;
   --data-sage: #a1d1a9;
   --data-slate: #b5c0b3;
+  --champagne-wash: #3c372b;
+  --lilac-wash: #302f40;
+  --surface-sheen: linear-gradient(130deg, #ffffff0c, #ffffff00 58%);
 
   --e1: 0 2px 6px #0004;
   --e2: 0 10px 28px -10px #0008;
@@ -107,11 +115,8 @@
   --shadow-e2: var(--e2);
   --shadow-e3: var(--e3);
 
-  /* One family, two roles. Apple's own stack is named first so Apple devices
-     render in SF Pro natively and everyone else gets Inter, which is close
-     enough that the two are hard to tell apart at text sizes. */
-  --font-display: -apple-system, BlinkMacSystemFont, var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: -apple-system, BlinkMacSystemFont, var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
 
   --text-2xs: 11px;
   --text-xs: 12px;
@@ -146,9 +151,7 @@ body {
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.55;
-  /* The old "cv05"/"ss03" pair were Figtree alternates and do nothing here;
-     Inter's own defaults are what match SF Pro most closely. */
-  letter-spacing: -0.011em;
+  letter-spacing: -0.015em;
   overscroll-behavior-x: none;
 }
 
@@ -158,42 +161,43 @@ body {
   font-feature-settings: "tnum";
 }
 
-/**
- * Display type.
- *
- * The serif went, so the only things separating a headline from body copy are
- * weight and tracking — which is exactly how Apple does it. 600 rather than the
- * old 300: a light serif at 52px reads as editorial, a semibold sans at 52px
- * reads as a product page, and that is the whole brief. Tracking tightens as
- * size grows, so the optical gaps in large type close up.
- */
 .display {
-  font-family: var(--font-display);
-  font-weight: 600;
+  font-family: var(--font-editorial);
+  font-weight: 400;
   letter-spacing: -0.025em;
   line-height: 1.06;
 }
 
-/* Past about 48px, -0.025em is still too loose. */
 .display:is(h1),
 .display.tight {
-  letter-spacing: -0.032em;
+  letter-spacing: -0.025em;
 }
 
-/**
- * Eyebrow.
- *
- * The editorial system tracked these out to 0.14em, which is a magazine
- * mannerism. Apple sets its kickers tight, bold and small, so this tightens and
- * gains weight to compensate for the lost letter-spacing.
- */
 .eyebrow {
-  font-size: 11.5px;
-  letter-spacing: 0.055em;
+  font-size: 10.5px;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--ink-faint);
   font-weight: 600;
 }
+
+/* Blur is confined to small floating surfaces, keeping the map inexpensive. */
+.glass-panel {
+  background-color: var(--glass);
+  background-image: var(--surface-sheen);
+  border-color: var(--glass-line);
+  box-shadow: var(--e2);
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+  backdrop-filter: blur(20px) saturate(125%);
+}
+
+.luxury-surface {
+  background-color: var(--paper-raised);
+  background-image: radial-gradient(ellipse at 0% 0%, var(--champagne-wash), transparent 65%),
+    radial-gradient(ellipse at 100% 100%, var(--accent-wash), transparent 60%);
+}
+
+button:not(:disabled), select, summary { cursor: pointer; }
 
 .hairline {
   border-top: 1px solid var(--line);
@@ -227,7 +231,7 @@ body {
 /* ---- MapLibre overrides: the map must belong to PropIT ---- */
 .maplibregl-ctrl-attrib {
   font-size: 10px !important;
-  background: rgba(240, 236, 227, 0.9) !important;
+  background: var(--glass) !important;
   backdrop-filter: blur(6px);
   border-radius: 4px 0 0 0 !important;
 }

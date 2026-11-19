@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
-    const body = zoneRequestSchema.parse(await req.json());
+    const body = zoneRequestSchema.parse(await req.json().catch(() => null));
     const result = computeZone(body.anchors, body.filters, body.limit);
     return NextResponse.json(result);
   } catch (err) {

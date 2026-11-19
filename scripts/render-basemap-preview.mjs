@@ -78,12 +78,6 @@ function fillPoly(rings, colour) {
   }
 }
 
-function disc(cx, cy, r, colour) {
-  const c = rgb(colour);
-  for (let y = -r; y <= r; y++)
-    for (let x = -r; x <= r; x++)
-      if (x * x + y * y <= r * r) setPx(cx + x, cy + y, c);
-}
 function chip(cx, cy, halfW, halfH) {
   const border = rgb(P.chipBorder), fill = rgb(P.chip), ink = rgb(P.chipInk);
   for (let y = -halfH; y <= halfH; y++)

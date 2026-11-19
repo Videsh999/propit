@@ -15,7 +15,9 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const sp = new URL(req.url).searchParams;
   const num = (k: string) => {
-    const v = Number(sp.get(k));
+    const value = sp.get(k);
+    if (!value?.trim()) return null;
+    const v = Number(value);
     return Number.isFinite(v) ? v : null;
   };
 

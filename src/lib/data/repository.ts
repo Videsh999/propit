@@ -108,6 +108,7 @@ function candidates(opts: QueryOptions): Property[] {
 
   if (opts.center && opts.radiusKm) {
     const keys = cellsForRadius(opts.center, opts.radiusKm * RADIUS_CONTEXT_FACTOR);
+    if (!keys) return store.properties;
     const out: Property[] = [];
     for (const k of keys) {
       const bucket = store.propertyGrid.get(k);
@@ -119,7 +120,7 @@ function candidates(opts: QueryOptions): Property[] {
   if (opts.bounds) {
     const keys = cellsForBounds(opts.bounds);
     // Beyond a certain span the grid scan costs more than a linear pass.
-    if (keys.length > 4000) return store.properties;
+    if (!keys) return store.properties;
     const out: Property[] = [];
     for (const k of keys) {
       const bucket = store.propertyGrid.get(k);
@@ -567,19 +568,18 @@ export function nearbyPlaces(
   const seen = new Set<string>();
   const found: NearbyPlace[] = [];
 
-  for (const k of keys) {
-    const bucket = store.poiGrid.get(k);
-    if (!bucket) continue;
-    for (const poi of bucket) {
-      if (seen.has(poi.id)) continue;
-      if (verifiedOnly && !poi.verified) continue;
-      if (categories && categories.length && !categories.includes(poi.category)) continue;
-      const d = haversineKm(center, poi.location);
-      if (d > radiusKm) continue;
-      seen.add(poi.id);
-      const leg = estimateLeg(center, poi.location);
-      found.push({ ...poi, distanceKm: Math.round(d * 100) / 100, minutes: leg.minutes, estimated: leg.estimated });
-    }
+  const candidates = !keys || keys.length > store.pois.length
+    ? store.pois
+    : keys.flatMap((key) => store.poiGrid.get(key) ?? []);
+  for (const poi of candidates) {
+    if (seen.has(poi.id)) continue;
+    if (verifiedOnly && !poi.verified) continue;
+    if (categories && categories.length && !categories.includes(poi.category)) continue;
+    const d = haversineKm(center, poi.location);
+    if (d > radiusKm) continue;
+    seen.add(poi.id);
+    const leg = estimateLeg(center, poi.location);
+    found.push({ ...poi, distanceKm: Math.round(d * 100) / 100, minutes: leg.minutes, estimated: leg.estimated });
   }
 
   // The airport is always relevant even when it falls outside the radius.
@@ -750,7 +750,7 @@ export function poisInBounds(
   // A box spanning the whole city touches more cells than there are POIs, so
   // past that point the linear pass is the cheaper scan.
   const scan =
-    keys.length > store.pois.length
+    !keys || keys.length > store.pois.length
       ? store.pois
       : keys.flatMap((k) => store.poiGrid.get(k) ?? []);
 

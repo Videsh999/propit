@@ -96,17 +96,20 @@ export function getStore(): Store {
 }
 
 /** Cells intersecting a bounds box — the index scan. */
-export function cellsForBounds(b: Bounds): string[] {
-  const keys: string[] = [];
+export function cellsForBounds(b: Bounds): string[] | null {
   const y0 = Math.floor(b.south / CELL);
   const y1 = Math.floor(b.north / CELL);
   const x0 = Math.floor(b.west / CELL);
   const x1 = Math.floor(b.east / CELL);
+  if (![x0, x1, y0, y1].every(Number.isSafeInteger)) return null;
+  if (x1 < x0 || y1 < y0) return [];
+  if ((x1 - x0 + 1) * (y1 - y0 + 1) > 4000) return null;
+  const keys: string[] = [];
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) keys.push(`${y}:${x}`);
   return keys;
 }
 
-export function cellsForRadius(center: LatLng, radiusKm: number): string[] {
+export function cellsForRadius(center: LatLng, radiusKm: number): string[] | null {
   const latPad = radiusKm / 110.574;
   const lngPad = radiusKm / (111.32 * Math.cos((center.lat * Math.PI) / 180));
   return cellsForBounds({

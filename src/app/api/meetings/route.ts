@@ -27,6 +27,14 @@ export interface MeetingRecord extends z.infer<typeof meetingSchema> {
 
 /** Indian mobile numbers, with or without the country code. */
 const PHONE = /^(?:\+?91[-\s]?)?[6-9]\d{9}$/;
+const localDate = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+});
+
+function validCalendarDate(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
 
 const meetingSchema = z.object({
   name: z.string().trim().min(2, "Tell us your name.").max(80),
@@ -39,7 +47,7 @@ const meetingSchema = z.object({
   /** "site" is a visit in person; the others need no travel. */
   mode: z.enum(["site", "video", "call"]),
   /** ISO date, no time — the slot carries that. */
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date."),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date.").refine(validCalendarDate, "Pick a valid date."),
   slot: z.enum(["morning", "afternoon", "evening"]),
   note: z.string().trim().max(500).optional(),
   propertySlug: z.string().max(120).optional(),
@@ -64,10 +72,10 @@ export async function POST(req: Request) {
   }
 
   // A date in the past is a typo, not a request.
-  const when = new Date(`${parsed.date}T00:00:00`);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (Number.isNaN(when.getTime()) || when < today) {
+  const parts = localDate.formatToParts(new Date());
+  const part = (type: "year" | "month" | "day") => parts.find((entry) => entry.type === type)?.value ?? "";
+  const today = `${part("year")}-${part("month").padStart(2, "0")}-${part("day").padStart(2, "0")}`;
+  if (parsed.date < today) {
     return NextResponse.json(
       { error: "Please check these.", fields: { date: "Choose today or a later date." } },
       { status: 400 },

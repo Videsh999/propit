@@ -194,7 +194,8 @@ try {
     const bx = x + padL + nameW + gap;
     roundedBox(bx, y+3, badgeW, h-6, "#1E4A3C", "#1E4A3C", Math.floor((h-6)/2), false);
     text(countTxt, bx+bp, y+Math.floor(h/2)-3, "#FFFFFF");
-    p.compact ? badges++ : named++;
+    if (p.compact) badges++;
+    else named++;
   }
 } catch (e) { console.log(`(pins skipped: ${e.message})`); }
 

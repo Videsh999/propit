@@ -121,7 +121,8 @@ export function Hero({ localities, mapProjects, initialResults, prime, projects 
         <div className={styles.mapControls}>
           <div className={styles.searchPanel}>
             <div className={styles.searchHeading}>
-              <h1 id="home-title">Hyderabad property map</h1>
+              <span className={styles.mapEyebrow}><span /> Discover your next address</span>
+              <h1 id="home-title">Hyderabad, at home.</h1>
               <p aria-live="polite">{mapCount}{focusedLocality ? ` · ${focusedLocality.name}` : ""}</p>
             </div>
             <div className={styles.listingTabs} aria-label="Listing type">
@@ -218,12 +219,15 @@ function HomeCard({ property }: { property: ScoredProperty }) {
   return (
     <article className="relative">
       <Link href={`/property/${property.slug}`} className={styles.card}>
-        <Img src={property.images[0]?.url ?? ""} alt="" className={styles.cardImage} sizes="150px" />
+        <div className={styles.cardVisual}>
+          <Img src={property.images[0]?.url ?? ""} alt="" className={styles.cardImage} sizes="(max-width: 640px) 95vw, (max-width: 900px) 48vw, 32vw" />
+          <span className={styles.cardBadge}>{property.listingType === "buy" ? "For sale" : "For rent"}</span>
+        </div>
         <div className={styles.cardBody}>
           <strong>{price}</strong>
           <h3 className={styles.cardTitle}>{property.title}</h3>
           <p className={styles.address}>{property.address}</p>
-          <p><BedDouble size={14} /> {property.bedrooms > 0 && `${property.bedrooms} BHK · `}{formatArea(property.builtupAreaSqft)}</p>
+          <p className={styles.cardFacts}><BedDouble size={14} /> {property.bedrooms > 0 && `${property.bedrooms} BHK · `}{formatArea(property.builtupAreaSqft)}<ArrowUpRight size={16} className={styles.cardArrow} aria-hidden="true" /></p>
         </div>
       </Link>
       <CompareToggle id={property.id} compact className="absolute right-2 top-2" />

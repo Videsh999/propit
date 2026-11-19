@@ -108,7 +108,7 @@ export function MapToolbar({ localities }: { localities: LocalityLite[] }) {
 
   return (
     <div ref={ref} className="pointer-events-none relative">
-      <div className="pointer-events-auto inline-flex max-w-full items-center gap-0.5 rounded-xl border border-line bg-[color-mix(in_srgb,var(--paper-raised)_96%,transparent)] p-1 shadow-[var(--e2)] backdrop-blur-xl" role="group" aria-label="Map tools">
+      <div className="glass-panel pointer-events-auto inline-flex max-w-full items-center gap-0.5 rounded-2xl border p-1.5" role="group" aria-label="Map tools">
         <Tool
           icon={RadiusIcon}
           label="Radius"
@@ -481,7 +481,7 @@ function Tool({
       )}
     >
       <Icon size={14} strokeWidth={1.75} />
-      <span className="hidden min-[390px]:inline">{label}</span>
+      <span className="hidden min-[480px]:inline">{label}</span>
       {badge ? <span className="tnum text-[11px] opacity-75">{badge}</span> : null}
     </button>
   );
