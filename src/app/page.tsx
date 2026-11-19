@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
 import { allLocalities, allProjects, featuredProjects, queryProperties } from "@/lib/data/repository";
 import { formatCount, formatPrice, formatPriceSqft, projectStatusLabel } from "@/lib/format";
 import { Hero } from "@/components/home/hero";
@@ -23,8 +22,8 @@ export default function HomePage() {
   const prime = (
     <section key="prime-localities" className={styles.catalogue} aria-labelledby="prime-title">
       <div className={styles.sectionHeader}>
-        <h2 id="prime-title">Prime localities in Hyderabad</h2>
-        <Link className={styles.textLink} href="/localities">All localities <ArrowUpRight size={15} /></Link>
+        <div><p className={styles.sectionEyebrow}>A city of possibilities</p><h2 id="prime-title">Prime localities.</h2></div>
+        <Link className={styles.textLink} href="/localities">Explore localities</Link>
       </div>
       <ul className={styles.localityRail}>
         {PRIME_LOCALITIES.map((slug) => {
@@ -38,7 +37,6 @@ export default function HomePage() {
                   <h3>{locality.name}</h3>
                   <p>{formatPriceSqft(locality.avgPriceSqft)} <span>· {formatCount(locality.inventoryCount)} listings</span></p>
                 </div>
-                <ArrowUpRight aria-hidden="true" size={17} className={styles.tileArrow} />
               </Link>
             </li>
           );
@@ -50,8 +48,8 @@ export default function HomePage() {
   const projects = (
     <section key="projects" className={styles.catalogue} aria-labelledby="projects-title">
       <div className={styles.sectionHeader}>
-        <h2 id="projects-title">Projects in Hyderabad</h2>
-        <Link className={styles.textLink} href="/projects">All projects <ArrowUpRight size={15} /></Link>
+        <div><p className={styles.sectionEyebrow}>The next chapter of Hyderabad</p><h2 id="projects-title">Projects in Hyderabad.</h2></div>
+        <Link className={styles.textLink} href="/projects">Explore projects</Link>
       </div>
       <ul className={styles.projectRail}>
         {featuredProjects(4).map((project) => (
@@ -61,7 +59,7 @@ export default function HomePage() {
               <div className={styles.projectInfo}>
                 <p>{byId.get(project.localityId)?.name ?? "Hyderabad"} · {projectStatusLabel(project.status)}</p>
                 <h3>{project.name}</h3>
-                <div><strong>From {formatPrice(project.priceMin)}</strong><ArrowUpRight aria-hidden="true" size={16} /></div>
+                <div><strong>From {formatPrice(project.priceMin)}</strong></div>
               </div>
             </Link>
           </li>

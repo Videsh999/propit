@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Instrument_Serif } from "next/font/google";
+import { DM_Sans, Manrope } from "next/font/google";
 import { Suspense } from "react";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import "./globals.css";
@@ -18,10 +18,9 @@ const dmSans = DM_Sans({
   variable: "--font-dm-sans",
   display: "swap",
 });
-const editorial = Instrument_Serif({
+const display = Manrope({
   subsets: ["latin"],
-  weight: "400",
-  variable: "--font-instrument-serif",
+  variable: "--font-manrope",
   display: "swap",
 });
 
@@ -49,8 +48,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F7F8F5" },
-    { media: "(prefers-color-scheme: dark)", color: "#182724" },
+    { media: "(prefers-color-scheme: light)", color: "#F7F6FA" },
+    { media: "(prefers-color-scheme: dark)", color: "#211E29" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -59,7 +58,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${editorial.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${dmSans.variable} ${display.variable}`} suppressHydrationWarning>
       <body>
         <NuqsAdapter>
           <Providers>

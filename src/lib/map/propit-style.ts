@@ -17,18 +17,18 @@ export interface PropitPalette {
 }
 
 export const LIGHT_PALETTE: PropitPalette = {
-  land: "#f0efea",
-  landAlt: "#e7e9e3",
-  water: "#9fc4c9",
-  green: "#b1c7a5",
-  road: "#fffefb",
-  roadMajor: "#fffefb",
-  roadCasing: "#a6ada5",
-  building: "#d5dcd2",
-  label: "#535f5b",
-  labelHalo: "#f7f8f5",
-  labelStrong: "#263d38",
-  boundary: "#a6ada5",
+  land: "#efedf4",
+  landAlt: "#e7e4ed",
+  water: "#a8bdcf",
+  green: "#b6c5a2",
+  road: "#ffffff",
+  roadMajor: "#ffffff",
+  roadCasing: "#aaa5b8",
+  building: "#d6d1de",
+  label: "#5e566b",
+  labelHalo: "#f7f6fa",
+  labelStrong: "#362c48",
+  boundary: "#aaa5b8",
 };
 
 export const DARK_PALETTE: PropitPalette = {

@@ -4,7 +4,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useMemo, type ReactNode } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { ArrowUpRight, BedDouble, ChevronDown, LocateFixed, SlidersHorizontal } from "lucide-react";
+import { BedDouble, ChevronDown, Grid2X2, LocateFixed, MapPin, SlidersHorizontal } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import { AnchorsPanel } from "@/components/anchors/anchors-panel";
 import { FilterBar } from "@/components/filters/filter-bar";
@@ -50,14 +50,14 @@ export function Hero({ localities, mapProjects, initialResults, prime, projects 
     filters, setFilters, resetFilters, anchors, radius, polygon, useBounds, sort,
     setBounds, setUseBounds, selectedLocalitySlug, selectedPropertyId,
     filtersOpen, setFiltersOpen, setRadius, setPolygon, setDrawMode, fitBounds, select,
-    setAnchorsOpen, layers,
+    setAnchorsOpen, layers, flyTo,
   } = useDiscovery(useShallow((s) => ({
     filters: s.filters, setFilters: s.setFilters, resetFilters: s.resetFilters,
     anchors: s.anchors, radius: s.radius, polygon: s.polygon, useBounds: s.useBounds, sort: s.sort,
     setBounds: s.setBounds, setUseBounds: s.setUseBounds, selectedLocalitySlug: s.selectedLocalitySlug,
     selectedPropertyId: s.selectedPropertyId, filtersOpen: s.filtersOpen, setFiltersOpen: s.setFiltersOpen,
     setRadius: s.setRadius, setPolygon: s.setPolygon, setDrawMode: s.setDrawMode,
-    fitBounds: s.fitBounds, select: s.select, setAnchorsOpen: s.setAnchorsOpen, layers: s.layers,
+    fitBounds: s.fitBounds, select: s.select, setAnchorsOpen: s.setAnchorsOpen, layers: s.layers, flyTo: s.flyTo,
   })));
   const filterCount = activeFilterCount(filters);
   const isDefault = filters.listingType === "buy" && !filterCount
@@ -103,27 +103,12 @@ export function Hero({ localities, mapProjects, initialResults, prime, projects 
   return (
     <div className={styles.page}>
       <section id="home-map" className={styles.map} aria-labelledby="home-title">
-        <div className={styles.mapCanvas}>
-          <PropitMap
-            localityScope={focusedLocality}
-            scrollZoom={false}
-            cooperativeGestures
-            points={updating ? EMPTY_POINTS : results?.points ?? EMPTY_POINTS}
-            contextPoints={updating ? undefined : results?.contextPoints}
-            localityCounts={updating ? undefined : results?.localityCounts}
-            projects={scopedProjects}
-            localities={mapLocalities}
-            pois={pois.places}
-            zone={zone?.zone}
-            onBoundsChange={setBounds}
-          />
-        </div>
         <div className={styles.mapControls}>
           <div className={styles.searchPanel}>
             <div className={styles.searchHeading}>
-              <span className={styles.mapEyebrow}><span /> Discover your next address</span>
-              <h1 id="home-title">Hyderabad, at home.</h1>
-              <p aria-live="polite">{mapCount}{focusedLocality ? ` · ${focusedLocality.name}` : ""}</p>
+              <span className={styles.mapEyebrow}><MapPin size={14} aria-hidden="true" /> Hyderabad <span>Property atlas</span></span>
+              <h1 id="home-title">Find your <br /><span>place.</span></h1>
+              <p>A better way to call Hyderabad home.</p>
             </div>
             <div className={styles.listingTabs} aria-label="Listing type">
               {(["buy", "rent"] as const).map((type) => (
@@ -131,13 +116,13 @@ export function Hero({ localities, mapProjects, initialResults, prime, projects 
                   {type === "buy" ? "Buy" : "Rent"}
                 </button>
               ))}
-              <Link href="/projects">Projects <ArrowUpRight size={13} /></Link>
+              <Link href="/projects">Projects</Link>
             </div>
             <div className={styles.searchRow}>
               <SearchInput className={styles.searchInput} size="md" placeholder="Search a locality or landmark" stayOnMap />
               <div className={styles.selectWrap}>
                 <select aria-label="Budget" value={filters.priceMin !== null ? "custom" : filters.priceMax ?? ""} onChange={(event) => setFilters({ priceMin: null, priceMax: Number(event.target.value) || null })}>
-                  <option value="">Any budget</option>
+                  <option value="">Budget</option>
                   {BUDGETS[filters.listingType].map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   {filters.priceMin !== null && <option value="custom" disabled>Custom budget</option>}
                   {filters.priceMax !== null && !BUDGETS[filters.listingType].some(([value]) => value === filters.priceMax) && (
@@ -148,7 +133,7 @@ export function Hero({ localities, mapProjects, initialResults, prime, projects 
               </div>
               <div className={styles.selectWrap}>
                 <select aria-label="Bedrooms" value={filters.bedrooms.length > 1 ? "multiple" : filters.bedrooms[0] ?? ""} onChange={(event) => setFilters({ bedrooms: event.target.value ? [Number(event.target.value)] : [] })}>
-                  <option value="">Any BHK</option>
+                  <option value="">BHK</option>
                   {[0, 1, 2, 3, 4, 5].map((value) => <option key={value} value={value}>{value === 0 ? "Studio" : value === 5 ? "5+ BHK" : `${value} BHK`}</option>)}
                   {filters.bedrooms.length > 1 && <option value="multiple" disabled>Multiple BHK</option>}
                 </select>
@@ -159,44 +144,82 @@ export function Hero({ localities, mapProjects, initialResults, prime, projects 
               </button>
             </div>
           </div>
-          <MapToolbar localities={localities} />
-        </div>
-        <div className={styles.mapFooter}>
-          <div className={styles.localities} role="group" aria-label="Popular localities">
-            <button aria-pressed={!hasMapScope} onClick={() => chooseLocality("")}>
-              <LocateFixed size={14} aria-hidden="true" /> Hyderabad
-            </button>
-            {popular.map((locality) => (
-              <button key={locality.slug} aria-pressed={currentLocality === locality.slug} onClick={() => chooseLocality(locality.slug)}>
-                {locality.name}
+          <div className={styles.railResults}>
+            <div className={styles.railResultHeader}>
+              <p aria-live="polite">{mapCount}<span>{focusedLocality?.name ?? "Across Hyderabad"}</span></p>
+              <Link href={searchHref}>View all</Link>
+            </div>
+            {!isError && results?.items.slice(0, 2).map((property) => (
+              <button key={property.id} type="button" className={styles.railHome}
+                aria-pressed={selectedPropertyId === property.id} aria-label={`Show ${property.title}, ${property.address}, on map`}
+                onClick={() => { select(property.id, property); flyTo(property.location, 15.2); }}>
+                <Img src={property.images[0]?.url ?? ""} alt="" className={styles.railImage} sizes="72px" />
+                <span className={styles.railHomeInfo}>
+                  <strong>{property.listingType === "rent" && property.rentMonthly ? formatRent(property.rentMonthly) : formatPrice(property.price)}</strong>
+                  <span>{property.title}</span>
+                  <small>{property.address.split(",").at(-2)?.trim() ?? "Hyderabad"} · {formatArea(property.builtupAreaSqft)}</small>
+                </span>
+                <MapPin size={15} aria-hidden="true" className={styles.railPin} />
               </button>
             ))}
+            {isError && <button className={styles.railRetry} onClick={() => void refetch()}>Refresh properties</button>}
+            {!updating && results?.items.length === 0 && <button className={styles.railRetry} onClick={() => { resetFilters(); chooseLocality(""); }}>No matches. Clear filters</button>}
           </div>
-          {layers.priceHeat && layers.localities && (
-            <div className={styles.legend}>
-              <span>Price per sq.ft</span>
-              <span aria-hidden="true" className={styles.legendScale} />
-              <span>Lower to higher</span>
-            </div>
-          )}
         </div>
-        <AnimatePresence>{selectedLocalitySlug && <LocalityPanel />}</AnimatePresence>
-        <AnimatePresence><AnchorsPanel /></AnimatePresence>
-        <AnimatePresence>
-          {selectedPropertyId && (
-            <PropertyPreview key={selectedPropertyId} error={preview.isError} onRetry={() => void preview.refetch()}
-              className="bottom-[76px] max-h-[min(480px,calc(100%-88px))] max-sm:fixed max-sm:max-h-[calc(100dvh-156px)] [@media(max-height:570px)]:fixed [@media(max-height:570px)]:max-h-[calc(100dvh-156px)]" />
-          )}
-        </AnimatePresence>
-        <a className={styles.browseLink} href="#explore">Browse homes <ChevronDown size={15} aria-hidden="true" /></a>
+        <div className={styles.mapViewport}>
+          <div className={styles.mapCanvas}>
+            <PropitMap
+              localityScope={focusedLocality}
+              scrollZoom={false}
+              cooperativeGestures
+              points={updating ? EMPTY_POINTS : results?.points ?? EMPTY_POINTS}
+              contextPoints={updating ? undefined : results?.contextPoints}
+              localityCounts={updating ? undefined : results?.localityCounts}
+              projects={scopedProjects}
+              localities={mapLocalities}
+              pois={pois.places}
+              zone={zone?.zone}
+              onBoundsChange={setBounds}
+            />
+          </div>
+          <div className={styles.mapTools}><MapToolbar localities={localities} /></div>
+          <div className={styles.mapFooter}>
+            <div className={styles.localities} role="group" aria-label="Popular localities">
+              <button aria-pressed={!hasMapScope} onClick={() => chooseLocality("")}>
+                <LocateFixed size={14} aria-hidden="true" /> Hyderabad
+              </button>
+              {popular.map((locality) => (
+                <button key={locality.slug} aria-pressed={currentLocality === locality.slug} onClick={() => chooseLocality(locality.slug)}>
+                  {locality.name}
+                </button>
+              ))}
+            </div>
+            {layers.priceHeat && layers.localities && (
+              <div className={styles.legend}>
+                <span>Price per sq.ft</span>
+                <span aria-hidden="true" className={styles.legendScale} />
+                <span>Lower to higher</span>
+              </div>
+            )}
+          </div>
+          <AnimatePresence>{selectedLocalitySlug && <LocalityPanel />}</AnimatePresence>
+          <AnimatePresence><AnchorsPanel /></AnimatePresence>
+          <AnimatePresence>
+            {selectedPropertyId && (
+              <PropertyPreview key={selectedPropertyId} error={preview.isError} onRetry={() => void preview.refetch()}
+                className="bottom-[76px] max-h-[min(480px,calc(100%-88px))] max-sm:fixed max-sm:max-h-[calc(100dvh-156px)] [@media(max-height:570px)]:fixed [@media(max-height:570px)]:max-h-[calc(100dvh-156px)]" />
+            )}
+          </AnimatePresence>
+          <a className={styles.browseLink} href="#explore"><Grid2X2 size={15} aria-hidden="true" /> Browse homes</a>
+        </div>
       </section>
       <FilterBar hideInline />
 
       <div className={styles.explore}>
         <section id="explore" aria-labelledby="explore-title">
           <div className={styles.sectionHeader}>
-            <h2 id="explore-title">{filters.listingType === "buy" ? "Homes for sale" : "Homes for rent"}</h2>
-            <Link href={searchHref} className={styles.textLink}>More search options <ArrowUpRight size={16} /></Link>
+            <div><p className={styles.sectionEyebrow}>Make room for what’s next</p><h2 id="explore-title">{filters.listingType === "buy" ? "Homes for sale." : "Homes for rent."}</h2></div>
+            <Link href={searchHref} className={styles.textLink}>Explore all homes</Link>
           </div>
           <div className={styles.results} aria-busy={updating}>
             {isError ? (
@@ -227,7 +250,7 @@ function HomeCard({ property }: { property: ScoredProperty }) {
           <strong>{price}</strong>
           <h3 className={styles.cardTitle}>{property.title}</h3>
           <p className={styles.address}>{property.address}</p>
-          <p className={styles.cardFacts}><BedDouble size={14} /> {property.bedrooms > 0 && `${property.bedrooms} BHK · `}{formatArea(property.builtupAreaSqft)}<ArrowUpRight size={16} className={styles.cardArrow} aria-hidden="true" /></p>
+          <p className={styles.cardFacts}><BedDouble size={14} /> {property.bedrooms > 0 && `${property.bedrooms} BHK · `}{formatArea(property.builtupAreaSqft)}</p>
         </div>
       </Link>
       <CompareToggle id={property.id} compact className="absolute right-2 top-2" />

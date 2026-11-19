@@ -99,7 +99,7 @@ export function CompareView() {
 
   return (
     <div className="mx-auto max-w-[1320px] px-4 pb-24 pt-5 sm:px-8 sm:pt-8">
-      <header className="luxury-surface relative isolate overflow-hidden rounded-3xl border border-line px-4 py-5 text-ink shadow-e1 sm:px-7 sm:py-7">
+      <header className="atlas-banner relative isolate overflow-hidden rounded-3xl border border-line px-4 py-5 shadow-e1 sm:px-7 sm:py-7">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div>
             <p className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-accent">

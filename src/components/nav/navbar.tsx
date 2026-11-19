@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Search, Scale, User, Menu, X } from "lucide-react";
 import { Logo } from "@/components/nav/logo";
@@ -19,6 +19,7 @@ const LINKS = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const compareCount = useDiscovery((state) => state.compareIds.length);
   const [mobileOpen, setMobileOpen] = useState(false);
   const setPaletteOpen = useDiscovery((s) => s.setPaletteOpen);
@@ -35,13 +36,15 @@ export function Navbar() {
 
         <ul className="hidden flex-1 items-center gap-1 md:flex">
           {LINKS.map((l) => {
-            const active = pathname === l.href.split("?")[0] && pathname !== "/";
+            const listingType = l.href.includes("type=rent") ? "rent" : "buy";
+            const active = pathname === l.href.split("?")[0] && pathname !== "/"
+              && (pathname !== "/search" || (searchParams.get("type") ?? "buy") === listingType);
             return (
               <li key={l.label} className="px-2 py-2 lg:px-3">
                 <Link000
                   href={l.href}
                   className={cn(
-                    "text-[14px] transition-colors duration-[160ms]",
+                    "text-[14px] font-semibold transition-colors duration-[160ms]",
                     active ? "text-accent" : "text-muted hover:text-accent",
                   )}
                 >

@@ -28,7 +28,7 @@ export function Logo({
 }) {
   const S = {
     sm: { mark: "h-6 w-6", text: "text-[17px]", gap: "gap-2" },
-    md: { mark: "h-8 w-8", text: "text-[23px]", gap: "gap-2.5" },
+    md: { mark: "h-8 w-8", text: "text-[25px]", gap: "gap-2.5" },
     lg: { mark: "h-9 w-9", text: "text-[26px]", gap: "gap-3" },
   }[size];
 
@@ -37,7 +37,7 @@ export function Logo({
       <PropitMark className={cn("shrink-0", S.mark)} />
       <span
         className={cn(
-          "font-semibold leading-none tracking-[-0.02em] [font-family:var(--font-display)]",
+          "font-extrabold leading-none tracking-[-0.05em] [font-family:var(--font-display)]",
           S.text,
         )}
       >

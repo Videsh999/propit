@@ -28,17 +28,17 @@ export function PropitMark({ className }: { className?: string }) {
     >
       <defs>
         <linearGradient id="pi-gold" x1="6" y1="18" x2="58" y2="46" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#E1C99C" />
-          <stop offset="0.45" stopColor="#B99357" />
-          <stop offset="1" stopColor="#99713D" />
+          <stop stopColor="#E4EDAB" />
+          <stop offset="0.45" stopColor="#B9CA72" />
+          <stop offset="1" stopColor="#8E9F48" />
         </linearGradient>
         <linearGradient id="pi-ocean" x1="14" y1="12" x2="50" y2="52" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#78ABA6" />
-          <stop offset="1" stopColor="#3F7A73" />
+          <stop stopColor="#9583AD" />
+          <stop offset="1" stopColor="#635078" />
         </linearGradient>
         <linearGradient id="pi-land" x1="16" y1="14" x2="48" y2="50" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#ABC9AF" />
-          <stop offset="1" stopColor="#739F85" />
+          <stop stopColor="#D4C6E2" />
+          <stop offset="1" stopColor="#A795BC" />
         </linearGradient>
         {/* Everything continental is cut to the sphere, so the shapes can be
             drawn loosely and still meet the edge cleanly. */}

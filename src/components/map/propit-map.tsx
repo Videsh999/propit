@@ -359,11 +359,26 @@ export function PropitMap({
   useEffect(() => {
     let cancelled = false;
     let tries = 0;
+    let boundMap: MapLibreMap | undefined;
+    const restoreImages = () => {
+      if (registerImages(boundMap)) setReady(true);
+    };
+    const restoreMissingImage = ({ id }: { id: string }) => {
+      if (Object.hasOwn(PILL_SPECS, id)) restoreImages();
+    };
 
     const attempt = () => {
       if (cancelled) return;
       const map = mapRef.current?.getMap();
       if (map) {
+        if (boundMap !== map) {
+          boundMap?.off("style.load", restoreImages);
+          boundMap?.off("styleimagemissing", restoreMissingImage);
+          boundMap = map;
+          // Replacing the fallback or changing the basemap clears custom images.
+          map.on("style.load", restoreImages);
+          map.on("styleimagemissing", restoreMissingImage);
+        }
         if (process.env.NODE_ENV === "development") {
           (window as unknown as { __propitMap?: unknown }).__propitMap = map;
         }
@@ -385,6 +400,8 @@ export function PropitMap({
     attempt();
     return () => {
       cancelled = true;
+      boundMap?.off("style.load", restoreImages);
+      boundMap?.off("styleimagemissing", restoreMissingImage);
     };
   }, [registerImages, onBoundsChange]);
 
