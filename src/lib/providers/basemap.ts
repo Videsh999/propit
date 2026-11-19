@@ -108,7 +108,7 @@ export function basemapSources(): BasemapSource[] {
 /** Glyphs are served from PropIT itself, so labels never depend on a CDN. */
 export const GLYPHS_URL = "/fonts/{fontstack}/{range}.pbf";
 
-const GROUND = { light: "#F0ECE3", dark: "#15140F" } as const;
+const GROUND = { light: LIGHT_PALETTE.land, dark: DARK_PALETTE.land } as const;
 
 /** Raster styles are built in memory — nothing to fetch, nothing to hang on. */
 export function buildRasterStyle(source: BasemapSource, theme: MapTheme): StyleSpecification {

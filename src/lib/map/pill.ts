@@ -95,8 +95,8 @@ export function makePill(spec: PillSpec): {
  * are what separate a price from the map underneath it.
  */
 export const PILL_SPECS: Record<string, PillSpec> = {
-  "pill-idle": { fill: "#FFFFFF", border: "#C9C9CE", shadow: true },
-  "pill-hover": { fill: "#FFFFFF", border: "#625183", shadow: true },
-  "pill-selected": { fill: "#625183", border: "#625183", shadow: true },
-  "pill-seen": { fill: "#E8E8ED", border: "#D2D2D7", shadow: false },
+  "pill-idle": { fill: "#FFFFFF", border: "#A7B5AA", shadow: true },
+  "pill-hover": { fill: "#FFFFFF", border: "#245448", shadow: true },
+  "pill-selected": { fill: "#245448", border: "#245448", shadow: true },
+  "pill-seen": { fill: "#E7ECE6", border: "#C5D0C5", shadow: false },
 };

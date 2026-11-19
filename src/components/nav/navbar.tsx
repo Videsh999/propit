@@ -28,7 +28,7 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        "glass-panel sticky top-0 z-50 h-[72px] w-full border-b text-ink",
+        "sticky top-0 z-50 h-[72px] w-full border-b border-line bg-raised text-ink",
       )}
     >
       <nav className="mx-auto flex h-full max-w-[1440px] items-center gap-3 px-4 sm:px-5 lg:gap-7 lg:px-8">

@@ -7,7 +7,7 @@
  * smudge — and a raster would also soften on every non-integer device ratio.
  *
  * So this keeps what is legible at that size and discards what is not: the
- * puzzle-seamed globe, the green-and-blue continents, and the gold ring passing
+ * puzzle-seamed globe, the sage-and-jade continents, and the gold ring passing
  * behind the globe and back across its face. The ring is two arcs of one ellipse
  * with the sphere drawn between them, which is what sells the orbit as passing
  * *through* rather than sitting on top.
@@ -28,17 +28,17 @@ export function PropitMark({ className }: { className?: string }) {
     >
       <defs>
         <linearGradient id="pi-gold" x1="6" y1="18" x2="58" y2="46" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#E4EDAB" />
-          <stop offset="0.45" stopColor="#B9CA72" />
-          <stop offset="1" stopColor="#8E9F48" />
+          <stop stopColor="#E3D1AA" />
+          <stop offset="0.45" stopColor="#BC9A60" />
+          <stop offset="1" stopColor="#947044" />
         </linearGradient>
         <linearGradient id="pi-ocean" x1="14" y1="12" x2="50" y2="52" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#9583AD" />
-          <stop offset="1" stopColor="#635078" />
+          <stop stopColor="#50796A" />
+          <stop offset="1" stopColor="#245448" />
         </linearGradient>
         <linearGradient id="pi-land" x1="16" y1="14" x2="48" y2="50" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#D4C6E2" />
-          <stop offset="1" stopColor="#A795BC" />
+          <stop stopColor="#D2DECC" />
+          <stop offset="1" stopColor="#9AB8A1" />
         </linearGradient>
         {/* Everything continental is cut to the sphere, so the shapes can be
             drawn loosely and still meet the edge cleanly. */}

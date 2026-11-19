@@ -581,12 +581,12 @@ export function PropitMap({
     setPlacedAreas(keep);
   }, []);
 
-  // Re-place whenever the data behind the labels changes. Deferred a frame so
-  // the map has settled and this never runs synchronously during an effect.
+  // Data may arrive before the map instance mounts. Place again when the map
+  // becomes ready so a first visit never needs a pan to reveal locality labels.
   useEffect(() => {
     const raf = requestAnimationFrame(() => placeAreas(localityCounts, showAreas));
     return () => cancelAnimationFrame(raf);
-  }, [localityCounts, showAreas, placeAreas]);
+  }, [localityCounts, showAreas, placeAreas, ready]);
 
   const projectGeoJson = useMemo(
     () => ({
@@ -902,6 +902,7 @@ export function PropitMap({
             setTileError(false);
           }
         }}
+        onLoad={handleMove}
         onMoveEnd={handleMove}
         onClick={handleClick}
         onMouseDown={(e) => {
@@ -966,8 +967,8 @@ export function PropitMap({
                 "fill-color": [
                   "case",
                   ["get", "selected"],
-                  "#285640",
-                  layers.priceHeat ? ["interpolate", ["linear"], ["get", "priceSqft"], 4200, "#248A3D", 9000, "#C93400", 17500, "#D70015"] : "#285640",
+                  "#245448",
+                  layers.priceHeat ? ["interpolate", ["linear"], ["get", "priceSqft"], 4200, "#248A3D", 9000, "#C93400", 17500, "#D70015"] : "#245448",
                 ],
                 // The unselected wash existed to give an empty map some texture.
                 // Now that real streets and water render underneath, it reads as
@@ -980,7 +981,7 @@ export function PropitMap({
               type="line"
               maxzoom={14}
               paint={{
-                "line-color": ["case", ["get", "selected"], "#285640", "#A89C82"],
+                "line-color": ["case", ["get", "selected"], "#245448", "#A7B5AA"],
                 "line-width": ["case", ["get", "selected"], 2, 0.9],
                 "line-opacity": ["case", ["get", "selected"], 0.9, 0.45],
               }}
@@ -998,8 +999,8 @@ export function PropitMap({
                 "text-allow-overlap": false,
               }}
               paint={{
-                "text-color": "#1D1D1F",
-                "text-halo-color": "#F7F4EC",
+                "text-color": "#202D28",
+                "text-halo-color": "#F5F6F3",
                 "text-halo-width": 1.8,
               }}
             />
@@ -1014,7 +1015,7 @@ export function PropitMap({
             type="line"
             layout={{ "line-cap": "round", "line-join": "round" }}
             paint={{
-              "line-color": "#F7F4EC",
+              "line-color": "#F5F6F3",
               "line-width": ["interpolate", ["linear"], ["zoom"], 9, 4, 12, 7, 15, 12],
               "line-opacity": 0.9,
             }}
@@ -1024,7 +1025,7 @@ export function PropitMap({
             type="line"
             layout={{ "line-cap": "round", "line-join": "round" }}
             paint={{
-              "line-color": "#285640",
+              "line-color": "#245448",
               "line-width": ["interpolate", ["linear"], ["zoom"], 9, 1.6, 12, 2.6, 15, 4],
               "line-opacity": ["interpolate", ["linear"], ["zoom"], 9, 0.75, 13, 0.6],
             }}
@@ -1043,8 +1044,8 @@ export function PropitMap({
               "text-padding": 4,
             }}
             paint={{
-              "text-color": "#285640",
-              "text-halo-color": "#F7F4EC",
+              "text-color": "#245448",
+              "text-halo-color": "#F5F6F3",
               "text-halo-width": 1.6,
             }}
           />
@@ -1052,12 +1053,12 @@ export function PropitMap({
 
         {/* Livable zone */}
         <Source id="zone" type="geojson" data={zoneGeoJson}>
-          <Layer id="zone-fill" type="fill" paint={{ "fill-color": "#285640", "fill-opacity": 0.12 }} />
+          <Layer id="zone-fill" type="fill" paint={{ "fill-color": "#245448", "fill-opacity": 0.12 }} />
           <Layer
             id="zone-line"
             type="line"
             paint={{
-              "line-color": "#285640",
+              "line-color": "#245448",
               "line-width": 1.6,
               "line-dasharray": [3, 2],
               "line-opacity": 0.75,
@@ -1072,7 +1073,7 @@ export function PropitMap({
             type="fill"
             filter={["!=", ["get", "kind"], "line"]}
             paint={{
-              "fill-color": "#17150F",
+              "fill-color": "#203E36",
               "fill-opacity": ["case", ["==", ["get", "kind"], "committed"], 0.06, 0.1],
             }}
           />
@@ -1080,7 +1081,7 @@ export function PropitMap({
             id="draw-line"
             type="line"
             paint={{
-              "line-color": "#17150F",
+              "line-color": "#203E36",
               "line-width": 1.6,
               "line-dasharray": ["case", ["==", ["get", "kind"], "committed"], ["literal", [1, 0]], ["literal", [3, 2]]],
             }}
@@ -1092,8 +1093,8 @@ export function PropitMap({
             type="circle"
             paint={{
               "circle-radius": ["case", ["get", "first"], 6, 4],
-              "circle-color": "#FBFAF7",
-              "circle-stroke-color": "#17150F",
+              "circle-color": "#F5F6F3",
+              "circle-stroke-color": "#203E36",
               "circle-stroke-width": 1.8,
             }}
           />
@@ -1101,11 +1102,11 @@ export function PropitMap({
 
         {/* Anchor radii + explicit radius search */}
         <Source id="radii" type="geojson" data={radiusGeoJson}>
-          <Layer id="radius-fill" type="fill" paint={{ "fill-color": "#B0763C", "fill-opacity": 0.05 }} />
+          <Layer id="radius-fill" type="fill" paint={{ "fill-color": "#947044", "fill-opacity": 0.05 }} />
           <Layer
             id="radius-line"
             type="line"
-            paint={{ "line-color": "#B0763C", "line-width": 1.2, "line-opacity": 0.55, "line-dasharray": [2, 2] }}
+            paint={{ "line-color": "#947044", "line-width": 1.2, "line-opacity": 0.55, "line-dasharray": [2, 2] }}
           />
         </Source>
 
@@ -1120,8 +1121,8 @@ export function PropitMap({
               type="circle"
               paint={{
                 "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 3, 15, 6],
-                "circle-color": "#FBFAF7",
-                "circle-stroke-color": "#285640",
+                "circle-color": "#F5F6F3",
+                "circle-stroke-color": "#245448",
                 "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 10, 1.2, 15, 1.8],
                 "circle-stroke-opacity": 0.72,
               }}
@@ -1138,7 +1139,7 @@ export function PropitMap({
                 "text-anchor": "top",
                 "text-max-width": 9,
               }}
-              paint={{ "text-color": "#4A453C", "text-halo-color": "#FBFAF7", "text-halo-width": 1.4 }}
+              paint={{ "text-color": "#5E6B63", "text-halo-color": "#F5F6F3", "text-halo-width": 1.4 }}
             />
           </Source>
         )}
@@ -1152,8 +1153,8 @@ export function PropitMap({
               type="circle"
               paint={{
                 "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 4, 14, 7],
-                "circle-color": "#C93400",
-                "circle-stroke-color": "#F7F4EC",
+                "circle-color": "#947044",
+                "circle-stroke-color": "#F5F6F3",
                 "circle-stroke-width": 2,
               }}
             />
@@ -1170,8 +1171,8 @@ export function PropitMap({
                 "text-max-width": 9,
               }}
               paint={{
-                "text-color": "#285640",
-                "text-halo-color": "#F7F4EC",
+                "text-color": "#245448",
+                "text-halo-color": "#F5F6F3",
                 "text-halo-width": 1.6,
               }}
             />
@@ -1189,9 +1190,9 @@ export function PropitMap({
               layout={{ visibility: showAreas ? "none" : "visible" }}
               paint={{
                 "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 2.4, 15, 3.6],
-                "circle-color": "#8A7B5E",
+                "circle-color": "#947044",
                 "circle-opacity": 0.28,
-                "circle-stroke-color": "#F7F4EC",
+                "circle-stroke-color": "#F5F6F3",
                 "circle-stroke-width": 0.8,
                 "circle-stroke-opacity": 0.4,
               }}
@@ -1210,8 +1211,8 @@ export function PropitMap({
             layout={{ visibility: showAreas ? "none" : "visible" }}
             paint={{
               "circle-radius": ["case", ["get", "selected"], 6, ["get", "hovered"], 5.5, 4],
-              "circle-color": ["case", ["get", "selected"], "#17150F", "#FFFFFF"],
-              "circle-stroke-color": ["case", ["get", "selected"], "#17150F", "#8A7B5E"],
+              "circle-color": ["case", ["get", "selected"], "#203E36", "#FFFFFF"],
+              "circle-stroke-color": ["case", ["get", "selected"], "#203E36", "#947044"],
               "circle-stroke-width": 1.6,
               "circle-opacity": 1,
             }}
@@ -1242,7 +1243,7 @@ export function PropitMap({
                 "symbol-sort-key": ["case", ["get", "selected"], 0, ["get", "hovered"], 1, 2],
               }}
               paint={{
-                "text-color": ["case", ["get", "selected"], "#FBFAF7", "#17150F"],
+                "text-color": ["case", ["get", "selected"], "#F5F6F3", "#203E36"],
               }}
             />
           )}
