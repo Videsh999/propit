@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { allLocalities } from "@/lib/data/repository";
-import { getStore } from "@/lib/data/store";
+import { getStore, prepareStore } from "@/lib/data/store";
 import { Suspense } from "react";
 import { DiscoveryView } from "@/components/search/discovery-view";
 import { SearchUrlSync } from "@/components/search/url-sync";
@@ -11,7 +11,8 @@ export const metadata: Metadata = {
     "Search Hyderabad property on a live map. Filter by budget, bedrooms and type, or anchor the search to your office and your child's school.",
 };
 
-export default function SearchPage() {
+export default async function SearchPage() {
+  await prepareStore();
   const localities = allLocalities().map((l) => ({
     slug: l.slug,
     name: l.name,

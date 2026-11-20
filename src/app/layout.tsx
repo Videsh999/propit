@@ -11,6 +11,9 @@ import { Navbar } from "@/components/nav/navbar";
 import { Footer } from "@/components/nav/footer";
 import { CommandPalette } from "@/components/search/command-palette";
 import { AssistantRail } from "@/components/ai/assistant-rail";
+import { isProductionDeployment, supabaseConfig } from "@/lib/deployment";
+
+export const dynamic = "force-dynamic";
 
 // Self-hosted, with fallback metrics supplied by next/font to limit layout shift.
 const dmSans = DM_Sans({
@@ -43,7 +46,7 @@ export const metadata: Metadata = {
     images: [{ url: "/brand/propit-logo.png", width: 1254, height: 1254, alt: "PropIT" }],
   },
   twitter: { card: "summary_large_image", images: ["/brand/propit-logo.png"] },
-  robots: { index: true, follow: true },
+  robots: { index: isProductionDeployment(), follow: isProductionDeployment() },
 };
 
 export const viewport: Viewport = {
@@ -61,7 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${dmSans.variable} ${display.variable}`} suppressHydrationWarning>
       <body>
         <NuqsAdapter>
-          <Providers>
+          <Providers authConfigured={!!supabaseConfig()} production={isProductionDeployment()}>
             <ScrollRestoration />
             <Suspense fallback={<div className="h-[72px] border-b border-line" />}>
               <Navbar />

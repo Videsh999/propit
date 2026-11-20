@@ -1,11 +1,12 @@
 import { SITE_ORIGIN } from "@/lib/site-url";
 import type { MetadataRoute } from "next";
 import { allLocalities, allProjects } from "@/lib/data/repository";
-import { getStore } from "@/lib/data/store";
+import { getStore, prepareStore } from "@/lib/data/store";
 
 const BASE = SITE_ORIGIN;
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  await prepareStore();
   const now = new Date();
   const store = getStore();
 
@@ -42,3 +43,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
   ];
 }
+
+export const dynamic = "force-dynamic";

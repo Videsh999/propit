@@ -4,6 +4,9 @@ import { generate } from "./generate";
 import { DEVELOPERS, DEVELOPER_BY_ID } from "./developers";
 import { POIS } from "./pois";
 import { HYDERABAD } from "./localities";
+import { catalogSchema, type Catalog } from "./catalog-schema";
+import { isProductionDeployment } from "@/lib/deployment";
+import { publicDatabase } from "@/lib/supabase/public";
 
 /**
  * In-memory store with a uniform grid spatial index — the development stand-in
@@ -50,8 +53,10 @@ function buildGrid<T extends { location: LatLng }>(items: T[]): Map<string, T[]>
   return grid;
 }
 
-function build(): Store {
-  const { projects, properties, localities } = generate();
+function build(catalog?: Catalog): Store {
+  const { projects, properties, localities } = catalog ?? generate();
+  const developers = catalog?.developers ?? DEVELOPERS;
+  const pois = catalog?.pois ?? POIS;
 
   const propertiesByLocality = new Map<string, Property[]>();
   const propertiesByProject = new Map<string, Property[]>();
@@ -67,7 +72,7 @@ function build(): Store {
   }
 
   return {
-    city: HYDERABAD,
+    city: catalog?.city ?? HYDERABAD,
     localities,
     localityById: new Map(localities.map((l) => [l.id, l])),
     localityBySlug: new Map(localities.map((l) => [l.slug, l])),
@@ -79,18 +84,40 @@ function build(): Store {
     propertyBySlug: new Map(properties.map((p) => [p.slug, p])),
     propertiesByLocality,
     propertiesByProject,
-    pois: POIS,
-    poiById: new Map(POIS.map((p) => [p.id, p])),
-    developers: DEVELOPERS,
-    developerById: DEVELOPER_BY_ID,
+    pois,
+    poiById: new Map(pois.map((p) => [p.id, p])),
+    developers,
+    developerById: new Map(developers.map((d) => [d.id, d])),
     propertyGrid: buildGrid(properties),
-    poiGrid: buildGrid(POIS),
+    poiGrid: buildGrid(pois),
   };
 }
 
 // Survives hot reload in dev so the dataset stays stable across edits.
 const g = globalThis as unknown as { __propitStoreV2?: Store };
+let live: { store: Store; loadedAt: number } | null = null;
+let loading: Promise<void> | null = null;
+
+/** Await at request boundaries. Only an atomically validated, published snapshot is served. */
+export async function prepareStore(): Promise<void> {
+  if (!isProductionDeployment()) return;
+  if (live && Date.now() - live.loadedAt < 60_000) return;
+  if (!loading) {
+    loading = (async () => {
+      const { data, error } = await publicDatabase().from("catalog_snapshots").select("payload").eq("city_slug", "hyderabad").eq("published", true).single();
+      if (error || !data) throw new Error("The published property catalog is unavailable.");
+      const catalog = catalogSchema.parse(data.payload);
+      live = { store: build(catalog), loadedAt: Date.now() };
+    })().finally(() => { loading = null; });
+  }
+  await loading;
+}
+
 export function getStore(): Store {
+  if (isProductionDeployment()) {
+    if (!live || Date.now() - live.loadedAt > 300_000) throw new Error("Property catalog temporarily unavailable.");
+    return live.store;
+  }
   if (!g.__propitStoreV2) g.__propitStoreV2 = build();
   return g.__propitStoreV2;
 }

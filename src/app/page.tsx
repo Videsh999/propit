@@ -1,3 +1,4 @@
+import { prepareStore } from "@/lib/data/store";
 import Link from "next/link";
 import { allLocalities, allProjects, featuredProjects, queryProperties } from "@/lib/data/repository";
 import { formatCount, formatPrice, formatPriceSqft, projectStatusLabel } from "@/lib/format";
@@ -7,7 +8,8 @@ import styles from "@/components/home/hero.module.css";
 
 const PRIME_LOCALITIES = ["gachibowli", "kokapet", "madhapur", "jubilee-hills", "banjara-hills", "financial-district"];
 
-export default function HomePage() {
+export default async function HomePage() {
+  await prepareStore();
   const inventory = allLocalities();
   const bySlug = new Map(inventory.map((locality) => [locality.slug, locality]));
   const byId = new Map(inventory.map((locality) => [locality.id, locality]));

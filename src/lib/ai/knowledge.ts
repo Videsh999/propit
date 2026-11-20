@@ -1,4 +1,5 @@
 import "server-only";
+import { isProductionDeployment } from "@/lib/deployment";
 import { getStore } from "@/lib/data/store";
 import { AMENITIES } from "@/lib/data/developers";
 import { localityIntelligence, nearbyPlaces } from "@/lib/data/repository";
@@ -8,7 +9,7 @@ import type { ToolContext } from "./tools";
 import { OFFICIAL_SOURCES, SHOWCASE_NOTE, type AssistantSource } from "./sources";
 
 export type GroundedAnswer = { text: string; sources: AssistantSource[] };
-export const showcaseSource = (label: string, href: string): AssistantSource => ({ label, href, kind: "showcase" });
+export const showcaseSource = (label: string, href: string): AssistantSource => ({ label, href, kind: isProductionDeployment() ? "catalog" : "showcase" });
 export const listedPrice = (p: Property) => p.listingType === "buy"
   ? formatPrice(p.price) : p.rentMonthly == null ? "Rent on request" : formatRent(p.rentMonthly);
 export const amenityName = (slug: string) => AMENITIES.find((entry) => entry.slug === slug)?.name ?? slug;
@@ -79,11 +80,11 @@ export function officialGuidance(query: string): GroundedAnswer | null {
   const parts: string[] = [];
   const sources: AssistantSource[] = [];
   if (/\b(?:rera|registration number|promoter registration)\b/i.test(query)) {
-    parts.push("**Project registration** — Search TG RERA using the project or promoter name from the builder’s documents, or the registration number on those documents. Match the project, promoter and phase in the official record. PropIT’s showcase RERA numbers cannot establish registration.");
+    parts.push("**Project registration** — Search TG RERA using the project or promoter name from the builder’s documents, or the registration number on those documents. Match the project, promoter and phase in the official record. A number shown on a property listing alone cannot establish registration.");
     sources.push(OFFICIAL_SOURCES.rera);
   }
   if (/\b(?:encumbrance|stamp duty|registration fee|market value|guideline value|circle rate|government value|sale deed|title (?:check|clear|verification))\b/i.test(query)) {
-    parts.push("**Registration and land records** — Check the property’s jurisdiction and identifiers through Telangana’s official services. Government registration values are a separate figure from PropIT’s showcase asking prices.");
+    parts.push("**Registration and land records** — Check the property’s jurisdiction and identifiers through Telangana’s official services. Government registration values are a separate figure from PropIT’s listed asking prices.");
     sources.push(OFFICIAL_SOURCES.registration, OFFICIAL_SOURCES.land);
   }
   if (/\b(?:zoning|land[ -]use|(?:hmda|hyderabad) master plan|road widening|layout approval|hmda approval|building permit)\b/i.test(query)) {
@@ -102,7 +103,7 @@ export function compareLocalities(localities: Locality[]): GroundedAnswer {
   const lines = stats.map(({ locality, stats }) => {
     const price = stats.medianPrice ? formatPrice(stats.medianPrice) : "unavailable";
     const rent = stats.avgRent ? formatRent(stats.avgRent) : "unavailable";
-    return `· **${locality.name}** · ${formatPriceSqft(stats.avgPriceSqft)} modelled · Median asking price ${price} · Average asking rent ${rent} · ${stats.inventory} showcase listings`;
+    return `· **${locality.name}** · ${formatPriceSqft(stats.avgPriceSqft)} modelled · Median asking price ${price} · Average asking rent ${rent} · ${stats.inventory} listings`;
   });
   return {
     text: [stats.length > 1 ? "**Hyderabad locality comparison**" : `**${stats[0].locality.name} market snapshot**`,
@@ -161,7 +162,7 @@ export function lookupKnowledge(question: string, ctx: ToolContext): GroundedAns
   if (!searches && /\b(?:live|latest|current|today(?:’s|'s)?|transaction|actual)\b/i.test(question) &&
     /\b(?:prices?|rates?|rent|inventory|availability|market)\b/i.test(question)) {
     return {
-      text: "I don’t have a live Hyderabad inventory or transaction feed. For government registration values, use Telangana’s official property services. I can show the asking prices and rents in PropIT’s showcase catalog.",
+      text: "I don’t have a live Hyderabad inventory or transaction feed. For government registration values, use Telangana’s official property services. I can show the asking prices and rents in PropIT’s property catalog.",
       sources: [OFFICIAL_SOURCES.registration, OFFICIAL_SOURCES.land],
     };
   }
@@ -175,7 +176,7 @@ export function lookupKnowledge(question: string, ctx: ToolContext): GroundedAns
     return {
       text: [
         "**" + area.name + " projects**",
-        results.length ? results.length + " matching developments in the showcase catalog." : "The showcase catalog has no matching developments here.",
+        results.length ? results.length + " matching developments in the property catalog." : "The property catalog has no matching developments here.",
         ...sample.map((entry) => "· **" + entry.name + "** · " + projectStatusLabel(entry.status) + " · From " + formatPrice(entry.priceMin)),
         SHOWCASE_NOTE,
       ].join("\n"),
@@ -229,7 +230,7 @@ export function lookupKnowledge(question: string, ctx: ToolContext): GroundedAns
     const buy = store.properties.filter((p) => p.listingType === "buy").length;
     return {
       text: [
-        "**Hyderabad showcase coverage**",
+        "**Hyderabad catalog coverage**",
         store.localities.length + " localities · " + store.projects.length + " projects · " + buy + " sale listings · " + (store.properties.length - buy) + " rentals.",
         "Ask for two localities to compare asking prices and rents, or name a project to see what information is on file.",
         SHOWCASE_NOTE,

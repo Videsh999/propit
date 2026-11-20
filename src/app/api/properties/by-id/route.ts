@@ -1,3 +1,6 @@
+import { apiError, HttpError } from "@/lib/api/http";
+import { requestBudget } from "@/lib/api/rate-limit";
+import { prepareStore } from "@/lib/data/store";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getPropertiesByIds } from "@/lib/data/repository";
@@ -7,6 +10,11 @@ import { DEFAULT_FILTERS } from "@/lib/data/filters";
 import type { ScoredProperty } from "@/types";
 
 export async function GET(req: Request) {
+  try {
+    if (req.url.length > 16384) throw new HttpError(414, "This search URL is too long.");
+    await requestBudget(req, "read");
+    await prepareStore();
+
   const sp = new URL(req.url).searchParams;
   const ids = (sp.get("ids") ?? "")
     .split(",")
@@ -52,4 +60,6 @@ export async function GET(req: Request) {
   });
 
   return NextResponse.json({ items });
+
+  } catch (error) { return apiError(error); }
 }

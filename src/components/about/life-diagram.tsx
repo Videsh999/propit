@@ -1,4 +1,5 @@
 "use client";
+import { useCustomer } from "@/components/auth/auth-provider";
 
 import { useRef } from "react";
 import { motion, useInView } from "motion/react";
@@ -21,6 +22,7 @@ import type { StoryData } from "@/lib/story/story-data";
  * intersection between them, and the real homes inside it.
  */
 export function LifeDiagram({ data }: { data: StoryData }) {
+  const { production } = useCustomer();
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "0px 0px -15% 0px" });
   const reduce = usePrefersReducedMotion();
@@ -182,7 +184,7 @@ export function LifeDiagram({ data }: { data: StoryData }) {
         )}
 
         <p className="mt-5 text-[12px] leading-relaxed text-faint">
-          Outer Ring Road from OpenStreetMap relation 5634923. Homes are development data.
+          Outer Ring Road from OpenStreetMap relation 5634923. {production ? "Homes are from the published catalog." : "Homes are development data."}
         </p>
       </figcaption>
     </figure>

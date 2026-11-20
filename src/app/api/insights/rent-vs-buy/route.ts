@@ -1,3 +1,6 @@
+import { apiError, HttpError } from "@/lib/api/http";
+import { requestBudget } from "@/lib/api/rate-limit";
+import { prepareStore } from "@/lib/data/store";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { corridorRentBuy } from "@/lib/data/repository";
@@ -14,6 +17,11 @@ const query = z.object({
 });
 
 export async function GET(req: Request) {
+  try {
+    if (req.url.length > 16384) throw new HttpError(414, "This search URL is too long.");
+    await requestBudget(req, "read");
+    await prepareStore();
+
   const parsed = query.safeParse(
     Object.fromEntries(new URL(req.url).searchParams),
   );
@@ -26,4 +34,6 @@ export async function GET(req: Request) {
     { bedrooms: parsed.data.bedrooms, corridors },
     { headers: { "cache-control": "public, max-age=60, stale-while-revalidate=600" } },
   );
+
+  } catch (error) { return apiError(error); }
 }

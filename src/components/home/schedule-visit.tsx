@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { indiaToday } from "@/lib/date";
+import { useCustomer } from "@/components/auth/auth-provider";
 import { Check, Loader2 } from "lucide-react";
 import { Img } from "@/components/ui/img";
 import { Reveal } from "@/components/ui/reveal";
@@ -46,6 +50,9 @@ export function ScheduleVisit({ heroImage, propertySlug, initialMode = "site" }:
   propertySlug?: string;
   initialMode?: (typeof MODES)[number]["value"];
 }) {
+  const customer = useCustomer();
+  const pathname = usePathname();
+  const reference = useRef<{ body: string; id: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [fields, setFields] = useState<Fields>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -54,7 +61,7 @@ export function ScheduleVisit({ heroImage, propertySlug, initialMode = "site" }:
   const [mode, setMode] = useState<(typeof MODES)[number]["value"]>(initialMode);
   const [slot, setSlot] = useState<(typeof SLOTS)[number]["value"]>("morning");
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = indiaToday();
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -65,19 +72,13 @@ export function ScheduleVisit({ heroImage, propertySlug, initialMode = "site" }:
 
     const data = new FormData(e.currentTarget);
     try {
+      const body = JSON.stringify({ name: data.get("name"), phone: data.get("phone"), email: data.get("email") || "", note: data.get("note") || "", date: data.get("date"), mode, slot, propertySlug });
+      if (reference.current?.body !== body) reference.current = { body, id: crypto.randomUUID() };
       const res = await fetch("/api/meetings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: data.get("name"),
-          phone: data.get("phone"),
-          email: data.get("email") || "",
-          note: data.get("note") || "",
-          date: data.get("date"),
-          mode,
-          slot,
-          propertySlug,
-        }),
+        headers: { "Content-Type": "application/json", "Idempotency-Key": reference.current.id },
+        body,
+        signal: AbortSignal.timeout(15_000),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -133,7 +134,7 @@ export function ScheduleVisit({ heroImage, propertySlug, initialMode = "site" }:
                   you travel.
                 </p>
 
-                <form onSubmit={submit} className="mt-8 space-y-6" noValidate>
+                {!customer.configured ? <p className="mt-6 rounded-xl border border-line bg-paper p-4 text-sm text-muted">Viewing requests open when the live service is connected.</p> : customer.loading ? <p className="mt-6 text-sm text-muted" role="status">Checking your account…</p> : !customer.user ? <Link href={`/login?${new URLSearchParams({ next: pathname })}`} className="mt-6 inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-semibold text-accent-ink">Sign in to request a viewing</Link> : <form onSubmit={submit} className="mt-8 space-y-6" noValidate>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Your name" name="name" error={fields.name}>
                       <input
@@ -213,7 +214,7 @@ export function ScheduleVisit({ heroImage, propertySlug, initialMode = "site" }:
                       Your number is used to confirm this viewing and nothing else.
                     </p>
                   </div>
-                </form>
+                </form>}
               </>
             )}
           </div>
@@ -246,9 +247,7 @@ function Confirmation({ done, onReset }: { done: Done; onReset: () => void }) {
 
       {/* The one thing this screen must not do is imply someone is on their way. */}
       <p className="mt-4 max-w-[44ch] border-t border-[var(--accent-line)] pt-4 text-[13px] leading-relaxed text-muted">
-        PropIT is in development, so this request is recorded but not yet sent to anyone. When
-        bookings go live it will reach the listing team and you&apos;ll get a confirmation on your
-        mobile.
+        Your request has been received for review. The listing team needs to confirm the exact time before you travel. This reference is a request, not a confirmed appointment.
       </p>
 
       <button

@@ -1,6 +1,5 @@
 import type { LatLng } from "@/types";
-import { POIS } from "@/lib/data/pois";
-import { LOCALITIES } from "@/lib/data/localities";
+import { getStore } from "@/lib/data/store";
 import { haversineKm } from "@/lib/geo/spatial";
 
 export interface GeoPlace {
@@ -29,7 +28,7 @@ class LocalGeocodingProvider implements GeocodingProvider {
     if (!needle) return [];
     const out: (GeoPlace & { score: number })[] = [];
 
-    for (const l of LOCALITIES) {
+    for (const l of getStore().localities) {
       const n = l.name.toLowerCase();
       if (!n.includes(needle)) continue;
       out.push({
@@ -42,7 +41,7 @@ class LocalGeocodingProvider implements GeocodingProvider {
       });
     }
 
-    for (const p of POIS) {
+    for (const p of getStore().pois) {
       const n = p.name.toLowerCase();
       if (!n.includes(needle)) continue;
       out.push({

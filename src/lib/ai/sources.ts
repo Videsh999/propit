@@ -1,10 +1,12 @@
+import { isProductionDeployment } from "@/lib/deployment";
+
 export type AssistantSource = {
   label: string;
   href: string;
-  kind: "showcase" | "official";
+  kind: "showcase" | "catalog" | "official";
 };
 
-export const SHOWCASE_NOTE = "PropIT showcase data. Prices, availability and market trends are illustrative.";
+export const SHOWCASE_NOTE = isProductionDeployment() ? "Source: PropIT’s published property catalog. Asking prices and availability can change; confirm with the seller. Market indicators and travel times are estimates unless stated otherwise." : "PropIT showcase data. Prices, availability and market trends are illustrative.";
 
 export const OFFICIAL_SOURCES = {
   rera: { label: "TG RERA project search", href: "https://rerait.telangana.gov.in/SearchList/Search", kind: "official" },

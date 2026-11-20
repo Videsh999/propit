@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/nav/logo";
+import { useCustomer } from "@/components/auth/auth-provider";
 
 const LINKS = [
   ["/search?type=buy", "Buy"], ["/search?type=rent", "Rent"], ["/projects", "Projects"],
@@ -10,6 +11,7 @@ const LINKS = [
 ];
 
 export function Footer() {
+  const { production } = useCustomer();
   const pathname = usePathname();
   if (pathname === "/search") return null;
 
@@ -26,7 +28,7 @@ export function Footer() {
         </div>
         <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-line pt-2 text-[11px] text-muted">
           <span>© {new Date().getFullYear()} PropIT Technologies</span>
-          <span>Demo inventory and modelled prices. Verify RERA and title independently.</span>
+          <span>{production ? "Property information is supplied by listing owners. Verify RERA, availability and title independently." : "Preview inventory and modelled prices. These are not live listings."}</span>
           <span>Map data © OpenStreetMap contributors</span>
         </p>
       </div>

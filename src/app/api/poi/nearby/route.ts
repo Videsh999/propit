@@ -1,9 +1,17 @@
+import { apiError, HttpError } from "@/lib/api/http";
+import { requestBudget } from "@/lib/api/rate-limit";
+import { prepareStore } from "@/lib/data/store";
 import { NextResponse } from "next/server";
 import { nearbyPlaces } from "@/lib/data/repository";
 import { latLngSchema, poiCategorySchema } from "@/lib/api/schema";
 import type { PoiCategory } from "@/types";
 
 export async function GET(req: Request) {
+  try {
+    if (req.url.length > 16384) throw new HttpError(414, "This search URL is too long.");
+    await requestBudget(req, "read");
+    await prepareStore();
+
   const sp = new URL(req.url).searchParams;
   const lat = sp.get("lat");
   const lng = sp.get("lng");
@@ -26,4 +34,6 @@ export async function GET(req: Request) {
   return NextResponse.json({
     places: nearbyPlaces(parsed.data, cats.length ? cats : null, radiusKm, 4),
   });
+
+  } catch (error) { return apiError(error); }
 }

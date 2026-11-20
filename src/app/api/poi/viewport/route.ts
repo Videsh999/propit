@@ -1,3 +1,6 @@
+import { apiError, HttpError } from "@/lib/api/http";
+import { requestBudget } from "@/lib/api/rate-limit";
+import { prepareStore } from "@/lib/data/store";
 import { NextResponse } from "next/server";
 import { poisInBounds } from "@/lib/data/repository";
 import { boundsSchema, poiCategorySchema } from "@/lib/api/schema";
@@ -13,6 +16,11 @@ export const dynamic = "force-dynamic";
  * and can never disagree.
  */
 export async function GET(req: Request) {
+  try {
+    if (req.url.length > 16384) throw new HttpError(414, "This search URL is too long.");
+    await requestBudget(req, "read");
+    await prepareStore();
+
   const sp = new URL(req.url).searchParams;
   const num = (k: string) => {
     const value = sp.get(k);
@@ -38,4 +46,6 @@ export async function GET(req: Request) {
     .filter((c): c is PoiCategory => poiCategorySchema.safeParse(c).success);
 
   return NextResponse.json(poisInBounds(parsed.data, active));
+
+  } catch (error) { return apiError(error); }
 }

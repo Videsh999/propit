@@ -252,7 +252,7 @@ const pages = [
   ["/profile", "Everything you"],
   ["/compare", "PropIT"],
   ["/sitemap.xml", "locality/kokapet"],
-  ["/robots.txt", "Sitemap"],
+  ["/robots.txt", "Disallow: /"],
 ];
 for (const [path, needle] of pages) {
   const r = await fetch(BASE + path);

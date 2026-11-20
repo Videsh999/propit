@@ -1,3 +1,6 @@
+import { apiError, HttpError } from "@/lib/api/http";
+import { requestBudget } from "@/lib/api/rate-limit";
+import { prepareStore } from "@/lib/data/store";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { queryProperties, clusterFor, CLUSTER_MAX_ZOOM } from "@/lib/data/repository";
@@ -7,7 +10,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
-    const sp = new URL(req.url).searchParams;
+    if (req.url.length > 16384) throw new HttpError(414, "This search URL is too long.");
+    await requestBudget(req, "read");
+    await prepareStore();
+
+  const sp = new URL(req.url).searchParams;
     const q = parsePropertyQuery(sp);
 
     // Anchors may ride along on the querystring so a search stays shareable.
@@ -58,14 +65,7 @@ export async function GET(req: Request) {
       offset: q.offset,
       limit: q.limit,
     });
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: "Invalid search parameters." }, { status: 400 });
-    }
-    console.error("[api/properties]", err);
-    return NextResponse.json(
-      { error: "We couldn't load properties just now. Please try again." },
-      { status: 500 },
-    );
-  }
+
+
+  } catch (error) { return apiError(error); }
 }

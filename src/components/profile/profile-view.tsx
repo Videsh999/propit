@@ -10,8 +10,9 @@ import { Img } from "@/components/ui/img";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePropertiesByIds } from "@/lib/hooks/use-properties";
 import { useStoreHydrated } from "@/lib/hooks/use-hydrated";
-import { formatPrice, formatPriceSqft } from "@/lib/format";
+import { formatPrice, formatRent, formatPriceSqft } from "@/lib/format";
 import type { Property } from "@/types";
+import { useCustomer } from "@/components/auth/auth-provider";
 
 type Tab = "saved" | "searches" | "anchors" | "recent" | "compare";
 
@@ -24,6 +25,7 @@ const TABS: { id: Tab; label: string; icon: typeof Heart }[] = [
 ];
 
 export function ProfileView() {
+  const customer = useCustomer();
   const router = useRouter();
   const {
     savedIds, savedSearches, anchors, recentIds, compareIds,
@@ -48,8 +50,12 @@ export function ProfileView() {
           Everything you&apos;ve kept.
         </h1>
         <p className="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted">
-          Saved homes, searches and anchors live in this browser. Sign-in and sync land with accounts.
+          {customer.user ? "Your saved homes and searches sync securely with your account." : "Keep homes and searches here, or sign in to sync them across devices."}
         </p>
+        <div className="mt-5 flex flex-wrap items-center gap-4 text-sm">
+          {customer.loading ? <p className="text-muted" role="status">Checking your account…</p> : customer.user ? <><span>{customer.user.email ?? "Signed in"}</span><form action="/auth/signout" method="post"><button className="min-h-11 font-semibold text-accent">Sign out</button></form></> : <Link href="/login?next=/profile" className="inline-flex min-h-11 items-center rounded-xl bg-accent px-5 font-semibold text-accent-ink">Sign in</Link>}
+        </div>
+        {customer.syncError && <p className="mt-3 text-sm text-muted" role="status">{customer.syncError} <button className="min-h-11 font-semibold text-accent" onClick={() => window.dispatchEvent(new Event("propit:retry-sync"))}>Retry sync</button></p>}
       </header>
 
       <nav className="mt-10 flex gap-1 overflow-x-auto border-b border-line scroll-quiet">
@@ -73,6 +79,7 @@ export function ProfileView() {
       </nav>
 
       <div className="mt-8">
+        {customer.loading ? <p role="status" className="text-muted">Loading your saved homes securely…</p> : <>
         {!hydrated && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -205,6 +212,7 @@ export function ProfileView() {
             </Button>
           </>
         )}
+        </>}
       </div>
     </div>
   );
@@ -226,7 +234,7 @@ function PropertyGrid({
   empty: string;
   onRemove?: (id: string) => void;
 }) {
-  const { data, isLoading } = usePropertiesByIds(ids);
+  const { data, isLoading, isError, refetch } = usePropertiesByIds(ids);
   const items: Property[] | null = ids.length === 0 ? [] : isLoading ? null : (data?.items ?? []);
 
   if (items === null) {
@@ -239,7 +247,8 @@ function PropertyGrid({
     );
   }
 
-  if (!items.length) return <Empty message={empty} hint="" />;
+  if (isError) return <div role="status" className="rounded-xl border border-line p-5"><p>We couldn’t load your saved properties.</p><button onClick={() => void refetch()} className="mt-3 min-h-11 font-semibold text-accent">Try again</button></div>;
+  if (!items.length) return <Empty message={empty} hint={ids.length ? "Some saved listings may no longer be available." : ""} />;
 
   return (
     <div className="grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -257,9 +266,9 @@ function PropertyGrid({
               {p.title}
             </h3>
             <p className="tnum mt-1 text-[15px] font-semibold text-ink">
-              {formatPrice(p.price)}
+              {p.listingType === "rent" && p.rentMonthly ? formatRent(p.rentMonthly) : formatPrice(p.price)}
               <span className="ml-2 text-[12px] font-normal text-faint">
-                {formatPriceSqft(p.pricePerSqft)}
+                {p.listingType === "rent" ? "Monthly rent" : formatPriceSqft(p.pricePerSqft)}
               </span>
             </p>
           </Link>

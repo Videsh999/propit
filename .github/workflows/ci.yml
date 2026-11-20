@@ -1,0 +1,38 @@
+name: Production checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PROPIT_MODE: preview
+      GEOCODING_PROVIDER: local
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint -- --max-warnings=0
+      - run: npm run test
+      - run: npm run check:map
+      - run: npm run build
+      - run: npm run typecheck
+      - name: HTTP acceptance and regression checks
+        run: |
+          npm run start -- --hostname 127.0.0.1 --port 3004 > /tmp/propit-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"; cat /tmp/propit-server.log' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3004/api/health; then break; fi
+            sleep 1
+          done
+          SMOKE_BASE=http://127.0.0.1:3004 npm run smoke
+          SMOKE_BASE=http://127.0.0.1:3004 npm run test:http

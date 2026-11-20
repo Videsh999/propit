@@ -1,5 +1,7 @@
+import { apiError, HttpError } from "@/lib/api/http";
+import { requestBudget } from "@/lib/api/rate-limit";
 import { NextResponse } from "next/server";
-import { getStore } from "@/lib/data/store";
+import { getStore, prepareStore } from "@/lib/data/store";
 import { propertyTypeLabel } from "@/lib/format";
 import type { CompareCandidate } from "@/lib/compare/types";
 
@@ -9,7 +11,12 @@ function normalize(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-export function GET(request: Request) {
+export async function GET(request: Request) {
+  try {
+    if (request.url.length > 16384) throw new HttpError(414, "This search URL is too long.");
+    await requestBudget(request, "read");
+    await prepareStore();
+
   const params = new URL(request.url).searchParams;
   const query = normalize((params.get("q") ?? "").slice(0, 160));
   const bedrooms = query.match(/\b(\d+)\s*bhk\b/);
@@ -40,4 +47,6 @@ export function GET(request: Request) {
     })
   );
   return NextResponse.json({ items, hasMore: (page + 1) * PAGE_SIZE < matches.length });
+
+  } catch (error) { return apiError(error); }
 }

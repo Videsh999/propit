@@ -46,13 +46,13 @@ export const boundsSchema = z.object({
 
 export const filtersSchema = z.object({
   listingType: listingTypeSchema.default("buy"),
-  propertyTypes: z.array(propertyTypeSchema).default([]),
-  bedrooms: z.array(z.number().int().min(0).max(10)).default([]),
+  propertyTypes: z.array(propertyTypeSchema).max(7).default([]),
+  bedrooms: z.array(z.number().int().min(0).max(10)).max(11).default([]),
   priceMin: z.number().nonnegative().nullable().default(null),
   priceMax: z.number().nonnegative().nullable().default(null),
   areaMin: z.number().nonnegative().nullable().default(null),
   areaMax: z.number().nonnegative().nullable().default(null),
-  possession: z.array(possessionSchema).default([]),
+  possession: z.array(possessionSchema).max(4).default([]),
   amenities: z.array(z.string().max(40)).max(20).default([]),
   localitySlugs: z.array(z.string().max(60)).max(40).default([]),
   verifiedOnly: z.boolean().default(false),
@@ -90,8 +90,7 @@ export function parsePropertyQuery(sp: URLSearchParams) {
   const num = (k: string) => {
     const v = sp.get(k);
     if (v == null || v === "") return null;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
+    return z.number().finite().parse(Number(v));
   };
   const list = (k: string) =>
     (sp.get(k) ?? "")
@@ -109,7 +108,7 @@ export function parsePropertyQuery(sp: URLSearchParams) {
   const filters = filtersSchema.parse({
     listingType: sp.get("type") ?? "buy",
     propertyTypes: list("propertyType"),
-    bedrooms: list("bhk").map(Number).filter(Number.isFinite),
+    bedrooms: list("bhk").map(Number),
     priceMin: num("minPrice"),
     priceMax: num("maxPrice"),
     areaMin: num("minArea"),
@@ -119,24 +118,22 @@ export function parsePropertyQuery(sp: URLSearchParams) {
     localitySlugs: list("locality"),
     verifiedOnly: sp.get("verified") === "1",
   });
+  if ((filters.priceMin != null && filters.priceMax != null && filters.priceMin > filters.priceMax) || (filters.areaMin != null && filters.areaMax != null && filters.areaMin > filters.areaMax)) {
+    throw new z.ZodError([{ code: "custom", path: ["filters"], message: "Minimum cannot exceed maximum." }]);
+  }
 
   const lat = num("lat");
   const lng = num("lng");
+  if (sp.has("radiusKm") && !(sp.has("lat") && sp.has("lng"))) throw new z.ZodError([{ code: "custom", path: ["radiusKm"], message: "A radius requires a center." }]);
 
   return {
     filters,
     bounds,
     center: sp.has("lat") || sp.has("lng") ? latLngSchema.parse({ lat, lng }) : null,
     radiusKm: sp.has("radiusKm") ? z.number().positive().max(60).parse(num("radiusKm")) : null,
-    zoom: num("zoom") ?? 11,
-    limit: Math.min(Math.max(num("limit") ?? 40, 0), 100),
-    offset: Math.max(num("offset") ?? 0, 0),
-    sort: (sp.get("sort") ?? "relevance") as
-      | "relevance"
-      | "price_asc"
-      | "price_desc"
-      | "newest"
-      | "area_desc"
-      | "fit",
+    zoom: z.number().min(0).max(22).parse(num("zoom") ?? 11),
+    limit: z.number().int().min(0).max(100).parse(num("limit") ?? 40),
+    offset: z.number().int().min(0).max(1_000_000).parse(num("offset") ?? 0),
+    sort: z.enum(["relevance", "price_asc", "price_desc", "newest", "area_desc", "fit"]).parse(sp.get("sort") ?? "relevance"),
   };
 }

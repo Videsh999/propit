@@ -1,3 +1,5 @@
+import { prepareStore } from "@/lib/data/store";
+import { isProductionDeployment } from "@/lib/deployment";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -35,6 +37,7 @@ const SPECIFICATIONS: [ProjectSpecification, string][] = [
 const MISSING = "Not supplied";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  await prepareStore();
   const { slug } = await params;
   const project = getProjectBySlug(slug);
   if (!project) return { title: "Project not found" };
@@ -50,6 +53,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
+  await prepareStore();
   const { slug } = await params;
   const project = getProjectBySlug(slug);
   if (!project) notFound();
@@ -155,7 +159,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                 </li>
               ))}
             </ul>}
-            {gallery.length > 0 && <p className="mb-3 text-xs text-muted">Photos in the demo inventory are illustrative.</p>}
+            {gallery.length > 0 && !isProductionDeployment() && <p className="mb-3 text-xs text-muted">Photos in the demo inventory are illustrative.</p>}
             {profile.videoUrl
               ? <video controls preload="none" poster={project.heroImage} src={profile.videoUrl} className="mt-3 w-full rounded-xl" aria-label={`${project.name} video tour`} />
               : <p className="text-sm text-muted">Project video not supplied.</p>}

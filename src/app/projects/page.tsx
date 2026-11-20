@@ -1,3 +1,4 @@
+import { prepareStore } from "@/lib/data/store";
 import type { Metadata } from "next";
 import { allProjects, featuredProjects, getDeveloper, getLocality } from "@/lib/data/repository";
 import { ProjectIndex, type IndexProject } from "@/components/project/project-index";
@@ -8,7 +9,8 @@ export const metadata: Metadata = {
     "New launches, under-construction and ready-to-move projects across Hyderabad, with developers, configurations and RERA status.",
 };
 
-export default function ProjectsPage() {
+export default async function ProjectsPage() {
+  await prepareStore();
   const projects: IndexProject[] = allProjects().map((p) => {
     const locality = getLocality(p.localityId);
     return {

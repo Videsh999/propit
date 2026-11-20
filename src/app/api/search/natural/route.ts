@@ -1,8 +1,9 @@
+import { apiError, HttpError, readJson } from "@/lib/api/http";
+import { requestBudget } from "@/lib/api/rate-limit";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { naturalRequestSchema } from "@/lib/api/schema";
 import { parseQuery, describeParsed } from "@/lib/search/parser";
-import { getStore } from "@/lib/data/store";
+import { getStore, prepareStore } from "@/lib/data/store";
 import { queryProperties } from "@/lib/data/repository";
 import { getGeocodingProvider } from "@/lib/providers/geocoding";
 import type { Anchor, PoiCategory } from "@/types";
@@ -17,7 +18,12 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   try {
-    const { query, context } = naturalRequestSchema.parse(await req.json().catch(() => null));
+    if (req.url.length > 16384) throw new HttpError(414, "This search URL is too long.");
+    const requestBody = await readJson(req);
+    await requestBudget(req, "read");
+    await prepareStore();
+
+  const { query, context } = naturalRequestSchema.parse(requestBody);
     const store = getStore();
     const localityNames = store.localities.map((l) => l.name);
     const parsed = parseQuery(query, localityNames);
@@ -94,11 +100,6 @@ export async function POST(req: Request) {
       items: result.items.slice(0, 12),
       needsAssistant: intent !== "filter_query",
     });
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: "That search couldn't be read." }, { status: 400 });
-    }
-    console.error("[api/search/natural]", err);
-    return NextResponse.json({ error: "Search is unavailable right now." }, { status: 500 });
-  }
+
+  } catch (error) { return apiError(error); }
 }

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import {
   getPropertyBySlug, getLocality, getDeveloper, similarProperties, nearbyPlaces,
 } from "@/lib/data/repository";
-import { getStore } from "@/lib/data/store";
+import { getStore, prepareStore } from "@/lib/data/store";
 import { PropertyDetail } from "@/components/property/property-detail";
 import { formatArea, formatPrice, propertyTypeLabel } from "@/lib/format";
 
@@ -12,6 +12,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
+  await prepareStore();
   const { slug } = await params;
   const property = getPropertyBySlug(slug);
   if (!property) return { title: "Home not found" };
@@ -31,6 +32,7 @@ export async function generateMetadata({
 }
 
 export default async function PropertyPage({ params }: { params: Promise<{ slug: string }> }) {
+  await prepareStore();
   const { slug } = await params;
   const property = getPropertyBySlug(slug);
   if (!property) notFound();

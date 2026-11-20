@@ -10,8 +10,10 @@ npm install
 npm run dev      # http://localhost:3000
 ```
 
-**No API keys are needed.** The basemap, geocoding, POIs and the assistant all have working keyless
-providers. Add keys to unlock better versions of the same features — never to make them work at all.
+The local preview needs no keys and uses labelled showcase inventory. Customer accounts,
+enquiries and public production inventory require Supabase. Read [the production runbook](docs/PRODUCTION.md)
+for environment setup, email/Google authentication, the database migration and launch checks.
+The Vercel production build blocks publication when those dependencies are missing.
 
 ---
 
@@ -127,10 +129,9 @@ Development runs on an **in-memory spatial store** with a uniform grid index
 (`src/lib/data/store.ts`) — 886 homes, 40 real localities, 98 projects and 386 mapped places, all
 generated deterministically from real Hyderabad coordinates and price bands.
 
-`db/schema.sql` is the production path: PostGIS geography columns, GiST indexes, and the actual
-queries (`ST_DWithin`, `ST_Intersection`, `ST_ClusterDBSCAN`) written out. Everything above
-`src/lib/data/repository.ts` is storage-agnostic, so swapping to Postgres means reimplementing that
-one module.
+Production reads an approved catalog snapshot from Supabase and builds the same spatial indexes.
+Customer data is stored in tables protected by row-level security. The active migration is under
+`supabase/migrations/`; `db/schema.sql` is a future PostGIS design, not the active persistence layer.
 
 ### Provider abstractions
 
@@ -190,16 +191,19 @@ for conversational tool use and `ANTHROPIC_MODEL` to override the default Sonnet
 
 ## Environment
 
-Everything in `.env.example` is optional. Copy it to `.env.local` and fill in what you want:
+Copy `.env.example` to `.env.local`. The first block is required for production; map, routing and
+paid assistant providers are optional. See [the production runbook](docs/PRODUCTION.md).
 
 ```
 ANTHROPIC_API_KEY=          # conversational assistant
-NEXT_PUBLIC_MAP_PROVIDER=   # carto (default) | maptiler
-NEXT_PUBLIC_MAPTILER_KEY=
+NEXT_PUBLIC_MAP_STYLE_URL= # optional paid or self-hosted style
 GEOCODING_PROVIDER=         # photon (default) | local
 ROUTING_PROVIDER=           # unset for estimates | ors
 ORS_API_KEY=                # real driving times + isochrones
-DATABASE_URL=               # PostGIS, for the production data layer
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SERVICE_ROLE_KEY=  # server only
+RATE_LIMIT_SECRET=         # server only, random 32+ characters
 ```
 
 ---
@@ -223,5 +227,7 @@ Hyderabad is the launch geography, not a hard-coded assumption — the city is a
 The listings, projects and locality statistics in this repo are **development data**, generated to
 demonstrate the product end to end against real geography. They are not live market inventory.
 
-Not yet built: accounts and authentication, real listing publication and document verification,
-payments, and the admin dashboard (the schema anticipates all of them).
+Implemented: email/Google sign-in, private account sync, pending viewing and seller submissions,
+approved catalog publication, request protection and CI checks. Hosted configuration and real-provider
+acceptance tests must pass before launch. Document verification, payments, dispatch to builders and
+an admin dashboard are not implemented.

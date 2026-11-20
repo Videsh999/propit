@@ -40,7 +40,9 @@ function resolve(): URL {
     // Vercel's host variables carry no scheme; a configured value usually does.
     const withScheme = /^https?:\/\//i.test(value) ? value : `https://${value}`;
     try {
-      return new URL(withScheme);
+      const parsed = new URL(withScheme);
+      if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password || parsed.pathname !== "/" || parsed.search || parsed.hash) continue;
+      return parsed;
     } catch {
       // A malformed value should not outrank a working fallback.
     }

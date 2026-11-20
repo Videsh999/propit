@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { allLocalities, allProjects, getLocality } from "@/lib/data/repository";
-import { getStore } from "@/lib/data/store";
+import { getStore, prepareStore } from "@/lib/data/store";
 import { FeaturedProperties, Movers, Developers } from "@/components/insights/sections";
 import { Lifestyles, ClosingCta } from "@/components/home/sections";
 import { LocalityDiscovery } from "@/components/home/locality-discovery";
@@ -18,7 +18,8 @@ export const metadata: Metadata = {
  * points, featured homes, movers and developer showcase still earn their place —
  * they just belong on their own page rather than competing with the map.
  */
-export default function InsightsPage() {
+export default async function InsightsPage() {
+  await prepareStore();
   const store = getStore();
   const localities = allLocalities();
   const projects = allProjects();

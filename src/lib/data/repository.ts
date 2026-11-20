@@ -206,7 +206,7 @@ export function queryProperties(opts: QueryOptions = {}): QueryResult {
     type: p.propertyType,
   });
 
-  const points = matched.slice(0, 4000).map(toPoint);
+  const points = matched.map(toPoint);
 
   // Nearest first, so the context that survives the cap is the context that
   // sits just over the line — the homes a user might widen the ring to reach.
@@ -228,9 +228,9 @@ export function queryProperties(opts: QueryOptions = {}): QueryResult {
   scored.sort((a, b) => {
     switch (sort) {
       case "price_asc":
-        return a.price - b.price;
+        return (filters.listingType === "rent" ? a.rentMonthly! - b.rentMonthly! : a.price - b.price);
       case "price_desc":
-        return b.price - a.price;
+        return (filters.listingType === "rent" ? b.rentMonthly! - a.rentMonthly! : b.price - a.price);
       case "area_desc":
         return b.builtupAreaSqft - a.builtupAreaSqft;
       case "newest":
@@ -279,7 +279,7 @@ export function queryProperties(opts: QueryOptions = {}): QueryResult {
     total,
     items: scored.slice(offset, offset + limit),
     clusters: [],
-    points: points.slice(0, MAX_HYDRATED * 12),
+    points,
     contextPoints,
     localityCounts,
   };

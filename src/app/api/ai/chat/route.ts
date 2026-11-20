@@ -7,6 +7,11 @@ import type { AssistantSource } from "@/lib/ai/sources";
 import { anchorSchema, filtersSchema } from "@/lib/api/schema";
 import { getPropertiesByIds } from "@/lib/data/repository";
 import { describeSituation } from "@/lib/ai/situation";
+import { prepareStore } from "@/lib/data/store";
+import { readJson, apiError } from "@/lib/api/http";
+import { requestBudget } from "@/lib/api/rate-limit";
+import { isProductionDeployment } from "@/lib/deployment";
+import { verifiedUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -27,13 +32,25 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const parsed = bodySchema.safeParse(await req.json().catch(() => null));
+  let body: unknown;
+  let apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  try {
+    body = await readJson(req, 65_536);
+    let customerId: string | undefined;
+    if (isProductionDeployment() && apiKey) {
+      try { customerId = (await verifiedUser())?.id; } catch { /* Guests keep the local advisor. */ }
+      if (!customerId) apiKey = undefined;
+    }
+    await requestBudget(req, "ai", customerId);
+    await prepareStore();
+  } catch (error) { return apiError(error); }
+  const parsed = bodySchema.safeParse(body);
   const last = parsed.success ? parsed.data.messages.at(-1) : undefined;
   if (!parsed.success || !last || last.role !== "user" || !last.content) {
     return Response.json({ error: "Malformed request." }, { status: 400 });
   }
   const { context, messages } = parsed.data;
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (messages.reduce((sum, message) => sum + message.content.length, 0) > 48_000) return Response.json({ error: "This conversation is too long. Start a new chat." }, { status: 400 });
   const question = last.content;
   const explicitReference = /\b(?:it|its|this (?:project|area|locality)|that (?:project|area|locality)|there)\b/i.test(question);
   const previous = explicitReference && !context.projectSlug && !context.propertyId && !context.localitySlug

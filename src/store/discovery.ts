@@ -12,6 +12,14 @@ import type {
   ScoredProperty,
 } from "@/types";
 import { DEFAULT_FILTERS } from "@/lib/data/filters";
+import { accountStateSchema, EMPTY_ACCOUNT_STATE } from "@/lib/account/schema";
+
+let persistencePaused = false;
+const browserStorage = {
+  getItem(name: string) { try { return localStorage.getItem(name); } catch { return null; } },
+  setItem(name: string, value: string) { if (!persistencePaused) { try { localStorage.setItem(name, value); } catch { /* In-memory browsing remains available. */ } } },
+  removeItem(name: string) { try { localStorage.removeItem(name); } catch { /* Storage may be disabled. */ } },
+};
 
 export const MAX_COMPARE_PROPERTIES = 4;
 
@@ -277,7 +285,7 @@ export const useDiscovery = create<DiscoveryState>()(
     clearCompare: () => set({ compareIds: [] }),
     toggleSaved: (id) =>
       set((s) => ({
-        savedIds: s.savedIds.includes(id) ? s.savedIds.filter((x) => x !== id) : [...s.savedIds, id],
+        savedIds: s.savedIds.includes(id) ? s.savedIds.filter((x) => x !== id) : [...s.savedIds, id].slice(-200),
       })),
     pushRecent: (id) =>
       set((s) => ({ recentIds: [id, ...s.recentIds.filter((x) => x !== id)].slice(0, 24) })),
@@ -320,8 +328,8 @@ export const useDiscovery = create<DiscoveryState>()(
     }),
     {
       name: "propit.discovery",
-      storage: createJSONStorage(() => localStorage),
-      version: 2,
+      storage: createJSONStorage(() => browserStorage),
+      version: 3,
       /**
        * Only what the user deliberately kept survives a reload.
        *
@@ -340,15 +348,33 @@ export const useDiscovery = create<DiscoveryState>()(
       }),
       /** v1 blobs carry filters/anchors; drop them rather than rehydrating them. */
       migrate: (persisted, version) => {
-        if (version >= 2) return persisted as never;
+        if (version >= 2) return accountStateSchema.safeParse(persisted).data ?? EMPTY_ACCOUNT_STATE;
         const rest = { ...((persisted ?? {}) as Record<string, unknown>) };
         delete rest.filters;
         delete rest.anchors;
-        return rest as never;
+        return accountStateSchema.safeParse(rest).data ?? EMPTY_ACCOUNT_STATE;
       },
+      merge: (persisted, current) => ({ ...current, ...(accountStateSchema.safeParse(persisted).data ?? EMPTY_ACCOUNT_STATE) }),
     },
   ),
 );
+
+let ownerQueue = Promise.resolve();
+let activeOwner: string | null = null;
+/** Guest and each signed-in account use separate browser storage namespaces. */
+export function setDiscoveryOwner(owner: string | null): Promise<void> {
+  ownerQueue = ownerQueue.catch(() => {}).then(async () => {
+    if (owner === activeOwner) return;
+    persistencePaused = true;
+    try {
+      useDiscovery.setState({ ...EMPTY_ACCOUNT_STATE, ...(activeOwner !== null ? { filters: { ...DEFAULT_FILTERS }, anchors: [], radius: null, polygon: null, selectedPropertyId: null, hoveredPropertyId: null, selectedLocalitySlug: null, previewProperty: null, viewedProperty: null } : {}) });
+      useDiscovery.persist.setOptions({ name: owner ? `propit.account.${owner}` : "propit.discovery" });
+      await useDiscovery.persist.rehydrate();
+      activeOwner = owner;
+    } finally { persistencePaused = false; }
+  });
+  return ownerQueue;
+}
 
 /** Serialise the current search into querystring params — every search is a URL. */
 export function filtersToParams(

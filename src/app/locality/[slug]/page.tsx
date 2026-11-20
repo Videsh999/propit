@@ -1,3 +1,4 @@
+import { prepareStore } from "@/lib/data/store";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -17,6 +18,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
+  await prepareStore();
   const { slug } = await params;
   const data = localityIntelligence(slug);
   if (!data) return { title: "Locality not found" };
@@ -35,6 +37,7 @@ export async function generateMetadata({
 }
 
 export default async function LocalityPage({ params }: { params: Promise<{ slug: string }> }) {
+  await prepareStore();
   const { slug } = await params;
   const data = localityIntelligence(slug);
   if (!data) notFound();

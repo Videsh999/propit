@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getStore } from "@/lib/data/store";
+import { getStore, prepareStore } from "@/lib/data/store";
 import { buildStoryData } from "@/lib/story/story-data";
 import { LifeDiagram } from "@/components/about/life-diagram";
 import { formatCount } from "@/lib/format";
+import { isProductionDeployment } from "@/lib/deployment";
 
 export const metadata: Metadata = {
   title: "About PropIT",
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
     "Why PropIT is built around a map and the places that matter in your life, rather than an endless list of property.",
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  await prepareStore();
   const store = getStore();
 
   return (
@@ -69,8 +71,7 @@ export default function AboutPage() {
           the architecture is Hyderabad-specific; the city is a row in a table.
         </p>
         <p className="text-[15px] text-faint">
-          This is development data, built to demonstrate the product end to end. It is not live market
-          inventory, and no listing here is for sale.
+          {isProductionDeployment() ? "Listings come from the published PropIT catalog. Confirm availability, pricing and legal documentation with the seller before making a decision." : "This is development data, built to demonstrate the product end to end. It is not live market inventory, and no listing here is for sale."}
         </p>
       </div>
 

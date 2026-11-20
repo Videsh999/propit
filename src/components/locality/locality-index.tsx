@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCustomer } from "@/components/auth/auth-provider";
 import { useMemo, useRef, useState } from "react";
 import { ChevronDown, MapPin, SlidersHorizontal } from "lucide-react";
 import { Img } from "@/components/ui/img";
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils";
 import styles from "@/components/browse/browse.module.css";
 
 export function LocalityIndex({ localities }: { localities: Locality[] }) {
+  const { production } = useCustomer();
   const [query, setQuery] = useState("");
   const [corridor, setCorridor] = useState("");
   const [rate, setRate] = useState("");
@@ -47,7 +49,7 @@ export function LocalityIndex({ localities }: { localities: Locality[] }) {
           <label className={styles.field}><span>Hyderabad corridor</span><select aria-label="Hyderabad corridor" value={corridor} onChange={(event) => { setCorridor(event.target.value); setShown(12); }}><option value="">All corridors</option>{corridors.map((name) => <option key={name}>{name}</option>)}</select><ChevronDown size={13} aria-hidden="true" /></label>
           <label className={styles.field}><span>Average price per sq.ft</span><select aria-label="Average price per sq.ft" value={rate} onChange={(event) => { setRate(event.target.value); setShown(12); }}><option value="">Any price</option>{[6000, 10000, 15000].map((price) => <option key={price} value={price}>Up to ₹{price.toLocaleString("en-IN")}</option>)}</select><ChevronDown size={13} aria-hidden="true" /></label>
         </div>
-        <p className={styles.notice}>Prices and movement are modelled from demo inventory.</p>
+        <p className={styles.notice}>{production ? "Price indicators are estimates based on the published catalog." : "Prices and movement are modelled from demo inventory."}</p>
         <Button variant="primary" className={cn(styles.mobileToggle, "mt-5 w-full")} onClick={showResults}>Show {matches.length} {matches.length === 1 ? "locality" : "localities"}</Button>
       </aside>
       <section ref={resultsRef} aria-label="Locality results" className={styles.results}>

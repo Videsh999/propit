@@ -1,5 +1,7 @@
+import { apiError, HttpError } from "@/lib/api/http";
+import { requestBudget } from "@/lib/api/rate-limit";
 import { NextResponse } from "next/server";
-import { getStore } from "@/lib/data/store";
+import { getStore, prepareStore } from "@/lib/data/store";
 import { haversineKm } from "@/lib/geo/spatial";
 import { parseQuery } from "@/lib/search/parser";
 
@@ -15,6 +17,11 @@ export interface Suggestion {
 }
 
 export async function GET(req: Request) {
+  try {
+    if (req.url.length > 16384) throw new HttpError(414, "This search URL is too long.");
+    await requestBudget(req, "search");
+    await prepareStore();
+
   const sp = new URL(req.url).searchParams;
   const q = (sp.get("q") ?? "").trim();
   if (q.length < 1) return NextResponse.json({ suggestions: [], parsed: null });
@@ -103,4 +110,6 @@ export async function GET(req: Request) {
       isQuestion: parsed.isQuestion,
     },
   });
+
+  } catch (error) { return apiError(error); }
 }

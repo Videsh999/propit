@@ -1,3 +1,4 @@
+import { prepareStore } from "@/lib/data/store";
 import type { Metadata } from "next";
 import { allLocalities } from "@/lib/data/repository";
 import { LocalityIndex } from "@/components/locality/locality-index";
@@ -8,7 +9,8 @@ export const metadata: Metadata = {
     "Every locality PropIT covers in Hyderabad, with average pricing, inventory, rental yield and year-on-year movement.",
 };
 
-export default function LocalitiesPage() {
+export default async function LocalitiesPage() {
+  await prepareStore();
   const localities = allLocalities();
 
   return (

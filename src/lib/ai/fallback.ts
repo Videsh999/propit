@@ -178,7 +178,7 @@ export async function fallbackConcierge(
       lines.push(
         `**${r.total} ${r.total === 1 ? "home" : "homes"}** match${r.total === 1 ? "es" : ""}${
           r.searchedAround ? ` around ${r.searchedAround}` : ""
-        } in PropIT’s showcase catalog.`,
+        } in PropIT’s property catalog.`,
       );
       if (r.topResults.length) {
         lines.push(

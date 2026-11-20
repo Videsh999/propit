@@ -78,6 +78,7 @@ class OpenRouteServiceProvider implements RoutingProvider {
         method: "POST",
         headers: { Authorization: this.key, "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(8000),
       },
     );
     if (!res.ok) throw new Error(`ORS matrix failed: ${res.status}`);
@@ -85,13 +86,16 @@ class OpenRouteServiceProvider implements RoutingProvider {
       distances: number[][];
       durations: number[][];
     };
-    return json.distances.map((row, i) =>
-      row.map((km, j) => ({
+    return origins.map((origin, i) =>
+      destinations.map((destination, j) => {
+        const km = json.distances?.[i]?.[j], duration = json.durations?.[i]?.[j];
+        if (km == null || duration == null || !Number.isFinite(km) || !Number.isFinite(duration) || km < 0 || duration < 0) return estimateLeg(origin, destination);
+        return {
         distanceKm: Math.round(km * 100) / 100,
-        minutes: Math.round(json.durations[i][j] / 60),
+        minutes: Math.round(duration / 60),
         estimated: false,
         mode: "drive" as const,
-      })),
+      }; }),
     );
   }
 
@@ -106,6 +110,7 @@ class OpenRouteServiceProvider implements RoutingProvider {
           range: [minutes * 60],
           range_type: "time",
         }),
+        signal: AbortSignal.timeout(8000),
       },
     );
     if (!res.ok) return null;

@@ -1,4 +1,5 @@
 "use client";
+import { useCustomer } from "@/components/auth/auth-provider";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -26,6 +27,7 @@ const STARTERS = [
 ];
 
 export function AssistantRail() {
+  const { production } = useCustomer();
   const {
     assistantOpen, setAssistantOpen, assistantDraft, setAssistantDraft, filters, anchors,
     selectedLocalitySlug, selectedPropertyId, viewedProperty, previewProperty, compareIds,
@@ -381,7 +383,7 @@ export function AssistantRail() {
               </button>
             </div>
             <p className="mt-2 px-1 text-[11px] leading-relaxed text-faint">
-              PropIT showcase prices and availability are illustrative. Official checks are linked when available.
+              {production ? "Answers use the published catalog. Confirm prices and availability with the seller. Official checks are linked when available." : "PropIT showcase prices and availability are illustrative. Official checks are linked when available."}
             </p>
           </form>
         </motion.aside>
@@ -396,7 +398,7 @@ function SourceLinks({ sources }: { sources: AssistantSource[] }) {
     <ul aria-label="Sources" className="mt-3 grid gap-1.5">
       {sources.map(({ label, href, kind }) => {
         const className = "flex min-h-9 items-center justify-between gap-2 rounded-lg border border-line bg-raised px-2.5 py-1.5 text-xs font-medium text-accent hover:border-accent";
-        const content = <><span className="min-w-0">{label}<small className="ml-1.5 text-[10px] text-muted">{kind === "official" ? "Official" : "Showcase"}</small></span><ArrowUpRight size={13} className="shrink-0" aria-hidden="true" /></>;
+        const content = <><span className="min-w-0">{label}<small className="ml-1.5 text-[10px] text-muted">{kind === "official" ? "Official" : kind === "catalog" ? "Catalog" : "Showcase"}</small></span><ArrowUpRight size={13} className="shrink-0" aria-hidden="true" /></>;
         return <li key={href}>{kind === "official"
           ? <a href={href} className={className} target="_blank" rel="noopener noreferrer">{content}</a>
           : <Link href={href} className={className}>{content}</Link>}

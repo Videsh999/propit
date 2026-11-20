@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useCustomer } from "@/components/auth/auth-provider";
 import { Check, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { PropitMap } from "@/components/map/propit-map";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { useSuggest } from "@/lib/hooks/use-suggest";
 import { AMENITIES } from "@/lib/data/developers";
-import { formatPrice, formatPriceSqft, propertyTypeLabel } from "@/lib/format";
+import { formatPrice, formatRent, formatPriceSqft, propertyTypeLabel } from "@/lib/format";
 import type { Locality, PropertyType } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +55,11 @@ const EMPTY: Draft = {
 };
 
 export function SellWizard({ localities }: { localities: LocalityLite[] }) {
+  const customer = useCustomer();
+  const [busy, setBusy] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const reference = useRef<{ body: string; id: string } | null>(null);
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [submitted, setSubmitted] = useState(false);
@@ -68,35 +75,52 @@ export function SellWizard({ localities }: { localities: LocalityLite[] }) {
 
   // Guidance, not gatekeeping — tell the seller how their ask compares.
   const guidance = useMemo(() => {
-    if (!locality || !perSqft) return null;
+    if (!locality || !perSqft || draft.listingType === "rent") return null;
     const delta = ((perSqft - locality.avgPriceSqft) / locality.avgPriceSqft) * 100;
     if (Math.abs(delta) < 8) return { tone: "ok" as const, text: `In line with ${locality.name} (${formatPriceSqft(locality.avgPriceSqft)} average).` };
     if (delta > 0) return { tone: "high" as const, text: `About ${Math.round(delta)}% above the ${locality.name} average of ${formatPriceSqft(locality.avgPriceSqft)}. Priced high sells slowly.` };
     return { tone: "low" as const, text: `About ${Math.round(-delta)}% below the ${locality.name} average of ${formatPriceSqft(locality.avgPriceSqft)}.` };
-  }, [locality, perSqft]);
+  }, [locality, perSqft, draft.listingType]);
 
   const errors = useMemo(() => {
     const e: Partial<Record<keyof Draft | "step", string>> = {};
     if (step >= 1 && !draft.localitySlug) e.localitySlug = "Pick the locality.";
     if (step >= 1 && !draft.location) e.location = "Place the pin on the map.";
+    if (step >= 1 && draft.address.trim().length < 5) e.address = "Enter the property address.";
     if (step >= 2 && (!area || area < 100)) e.areaSqft = "Enter the built-up area in sq.ft.";
     if (step >= 3 && !price) e.price = "Enter your asking price.";
     if (step >= 4 && !draft.title.trim()) e.title = "Give the listing a title.";
     if (step >= 4 && !draft.contactName.trim()) e.contactName = "We need a name for enquiries.";
-    if (step >= 4 && !/^[0-9+\- ]{8,15}$/.test(draft.contactPhone)) e.contactPhone = "Enter a valid phone number.";
+    if (step >= 4 && !/^(?:\+?91)?[6-9]\d{9}$/.test(draft.contactPhone.replace(/[\s-]/g, ""))) e.contactPhone = "Enter a valid Indian mobile number.";
     return e;
   }, [step, draft, area, price]);
 
   const canAdvance =
     (step === 0) ||
-    (step === 1 && !!draft.localitySlug && !!draft.location) ||
-    (step === 2 && area >= 100) ||
-    (step === 3 && price > 0) ||
+    (step === 1 && !!draft.localitySlug && !!draft.location && draft.address.trim().length >= 5) ||
+    (step === 2 && Number.isFinite(area) && area >= 100 && area <= 1_000_000) ||
+    (step === 3 && Number.isFinite(price) && price > 0 && price <= 1e12) ||
     (step === 4 && Object.keys(errors).length === 0);
 
   const mapPoints = draft.location
     ? [{ id: "draft", lat: draft.location.lat, lng: draft.location.lng, price: price || 0, bedrooms: draft.bedrooms, type: draft.propertyType }]
     : [];
+
+  async function submit() {
+    if (busy || !canAdvance) return;
+    setBusy(true); setSubmitError(null);
+    try {
+      const body = JSON.stringify(draft);
+      if (reference.current?.body !== body) reference.current = { body, id: crypto.randomUUID() };
+      const response = await fetch("/api/listings", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": reference.current.id }, body, signal: AbortSignal.timeout(15_000) });
+      const data = await response.json();
+      if (!response.ok) { setSubmitError(data.error ?? "We couldn’t submit your listing. Please try again."); return; }
+      setSubmissionId(data.id); setSubmitted(true);
+    } catch { setSubmitError("We couldn’t reach the server. Your listing has not been confirmed; please retry."); }
+    finally { setBusy(false); }
+  }
+
+  if (customer.configured && (customer.loading || !customer.user)) return <div className="mx-auto max-w-xl px-5 py-20"><h1 className="display text-[40px]">List your property.</h1><p className="mt-4 text-base text-muted">{customer.loading ? "Checking your account…" : "Sign in first so your listing is securely linked to your account."}</p>{!customer.loading && <Link href="/login?next=/sell" className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-accent px-5 font-semibold text-accent-ink">Sign in to list a property</Link>}</div>;
 
   if (submitted) {
     return (
@@ -104,11 +128,11 @@ export function SellWizard({ localities }: { localities: LocalityLite[] }) {
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[var(--accent-wash)] text-accent">
           <Check size={24} strokeWidth={2} />
         </span>
-        <h1 className="display mt-6 text-[36px] text-ink">Draft saved.</h1>
+        <h1 className="display mt-6 text-[36px] text-ink">Listing submitted.</h1>
         <p className="mx-auto mt-3 max-w-[46ch] text-[15px] leading-relaxed text-muted">
-          Your listing is captured and placed on the map. Publishing to buyers needs an owner account
-          and document verification — that step goes live with accounts.
+          Your listing is saved securely for review. It will appear to buyers only after the property details and documents have been checked.
         </p>
+        <p className="mt-3 break-all text-sm text-muted">Reference: {submissionId}</p>
         <Button variant="secondary" size="lg" className="mt-6" onClick={() => { setDraft(EMPTY); setStep(0); setSubmitted(false); }}>
           List another
         </Button>
@@ -283,8 +307,8 @@ export function SellWizard({ localities }: { localities: LocalityLite[] }) {
               {price > 0 && (
                 <div className="rounded-[var(--r-md)] border border-line bg-sunk p-4">
                   <p className="tnum text-[15px] text-ink">
-                    {formatPrice(price)}
-                    {perSqft > 0 && <span className="ml-2 text-[13px] text-muted">{formatPriceSqft(perSqft)}</span>}
+                    {draft.listingType === "rent" ? formatRent(price) : formatPrice(price)}
+                    {draft.listingType === "buy" && perSqft > 0 && <span className="ml-2 text-[13px] text-muted">{formatPriceSqft(perSqft)}</span>}
                   </p>
                   {guidance && (
                     <p className={cn("mt-2 text-[13px] leading-relaxed", guidance.tone === "high" ? "text-[var(--data-clay)]" : "text-muted")}>
@@ -339,6 +363,8 @@ export function SellWizard({ localities }: { localities: LocalityLite[] }) {
             </>
           )}
 
+          {submitError && <p role="alert" className="text-sm text-clay">{submitError}</p>}
+          {!customer.configured && <p className="text-sm text-muted">This form is a preview. Listing submissions open when the live service is connected.</p>}
           <div className="flex items-center gap-2 border-t border-line pt-6">
             {step > 0 && (
               <Button variant="ghost" size="md" className="gap-1.5" onClick={() => setStep(step - 1)}>
@@ -350,10 +376,10 @@ export function SellWizard({ localities }: { localities: LocalityLite[] }) {
               variant="primary"
               size="md"
               className="ml-auto gap-1.5"
-              disabled={!canAdvance}
-              onClick={() => (step === STEPS.length - 1 ? setSubmitted(true) : setStep(step + 1))}
+              disabled={!canAdvance || busy || (step === STEPS.length - 1 && !customer.configured)}
+              onClick={() => (step === STEPS.length - 1 ? void submit() : setStep(step + 1))}
             >
-              {step === STEPS.length - 1 ? "Save draft listing" : "Continue"}
+              {step === STEPS.length - 1 ? busy ? "Submitting…" : "Submit for review" : "Continue"}
               {step < STEPS.length - 1 && <ChevronRight size={15} strokeWidth={1.75} />}
             </Button>
           </div>
