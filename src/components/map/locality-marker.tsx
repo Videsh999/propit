@@ -51,7 +51,7 @@ export function LocalityMarker({
           "flex items-center gap-2 rounded-full border py-1 shadow-[var(--e1)]",
           compact ? "pl-1.5 pr-1.5" : "pl-3 pr-1.5",
           "transition-colors duration-[180ms]",
-          // The design fills the pin with the deep green and lightens the badge,
+          // The design fills the pin with the brand accent and lightens the badge,
           // which reads far better over a busy basemap than a white pill did.
           selected
             ? "border-[var(--accent-deep)] bg-[var(--accent-deep)]"

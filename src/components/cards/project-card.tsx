@@ -29,7 +29,7 @@ export function ProjectCard({
           {project.profile?.category && <Tag>{project.profile.category}</Tag>}
           {project.reraVerified && <QualityBadge quality="verified" label="RERA" />}
         </div>
-        <h3 className="mt-3 font-[family-name:var(--font-display)] text-[26px] font-bold leading-tight tracking-tight text-ink transition-colors group-hover:text-accent">
+        <h3 className="mt-3 font-[family-name:var(--font-editorial)] text-[28px] font-normal leading-tight tracking-tight text-ink transition-colors group-hover:text-accent">
           {project.name}
         </h3>
         <p className="mt-0.5 text-[13px] text-muted">
