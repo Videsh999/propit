@@ -29,10 +29,17 @@ test("Postgres migration enforces RLS, publication, idempotency, optimistic lock
     const attempts = await Promise.all(Array.from({ length: 10 }, () => db.query<{ saved: unknown }>("select save_customer_state(1,'{}') as saved")));
     assert.equal(attempts.filter(r => r.rows[0].saved !== null).length, 1);
     await assert.rejects(db.query("insert into customer_states(user_id) values($1)", [b]));
-    await db.query("insert into viewing_requests(user_id,request_key,payload_hash,payload) values($1,$2,'hash','{}')", [a, a]);
+    // Direct customer writes must not bypass the server's validation or rate budget.
     await assert.rejects(db.query("insert into viewing_requests(user_id,request_key,payload_hash,payload) values($1,$2,'hash','{}')", [a, a]));
     await assert.rejects(db.query("insert into viewing_requests(user_id,request_key,payload_hash,payload,status) values($1,$2,'hash','{}','confirmed')", [a, b]));
     await assert.rejects(db.query("insert into listing_submissions(user_id,request_key,payload_hash,payload,status) values($1,$2,'hash','{}','approved')", [a, a]));
+    await db.exec("reset role; set role service_role");
+    const submitted = await db.query<{ status: string }>("insert into viewing_requests(user_id,request_key,payload_hash,payload) values($1,$2,'hash','{}') returning status", [a, a]);
+    assert.equal(submitted.rows[0].status, "pending");
+    await assert.rejects(db.query("insert into viewing_requests(user_id,request_key,payload_hash,payload) values($1,$2,'hash','{}')", [a, a]));
+    await db.exec("reset role; set role authenticated");
+    assert.equal((await db.query("select * from viewing_requests")).rows.length, 1);
+    await assert.rejects(db.query("update viewing_requests set status = 'confirmed'"));
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [b]);
     assert.equal((await db.query("select * from customer_states")).rows.length, 0);
     assert.equal((await db.query("select * from viewing_requests")).rows.length, 0);

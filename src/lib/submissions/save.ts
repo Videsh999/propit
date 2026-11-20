@@ -4,6 +4,7 @@ import { z } from "zod";
 import { serverDatabase } from "@/lib/supabase/server";
 import { requestBudget } from "@/lib/api/rate-limit";
 import { HttpError } from "@/lib/api/http";
+import { serviceDatabase } from "@/lib/supabase/admin";
 
 export async function submissionIdentity(request: Request) {
   const database = await serverDatabase();
@@ -20,7 +21,9 @@ export async function saveSubmission(request: Request, identity: Awaited<ReturnT
   const hash = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
   const { database, user } = identity;
   const fields = "id,status,created_at,payload_hash";
-  const { data, error } = await database.from(table).insert({ user_id: user.id, request_key: requestKey.data, payload, payload_hash: hash, ...(table === "viewing_requests" ? { subject: subject ?? null } : {}) }).select(fields).single();
+  // Customers cannot insert via the public data API and bypass validation/budgets.
+  // Owner IDs always come from the verified session, never the request body.
+  const { data, error } = await serviceDatabase().from(table).insert({ user_id: user.id, request_key: requestKey.data, payload, payload_hash: hash, ...(table === "viewing_requests" ? { subject: subject ?? null } : {}) }).select(fields).single();
   if (!error && data) return data;
   if (error?.code !== "23505") throw error ?? new Error("Request was not saved.");
   const existing = await database.from(table).select(fields).eq("user_id", user.id).eq("request_key", requestKey.data).single();

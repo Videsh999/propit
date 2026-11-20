@@ -93,6 +93,8 @@ anchors inside an explicitly saved search sync as part of that search.
 Viewing enquiries and seller submissions are private to their creator and stored with idempotency
 references. They enter **pending** status. The UI does not promise a confirmed appointment, a published
 listing, sent email or completed sale. There is no automatic dispatch to builders or broker CRM yet.
+Customers have read-only owner access to these tables. Inserts go through the authenticated server
+API so public Supabase calls cannot bypass submission validation or request budgets.
 Assign an operations owner to review the Supabase queues and contact customers through your approved
 workflow. An admin portal, notification dispatch, payments and a real transaction feed are not implemented.
 

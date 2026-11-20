@@ -64,9 +64,8 @@ create table public.viewing_requests (
 create index viewing_requests_owner on public.viewing_requests(user_id, created_at desc);
 alter table public.viewing_requests enable row level security;
 revoke all on public.viewing_requests from anon, authenticated;
-grant select, insert on public.viewing_requests to authenticated;
+grant select on public.viewing_requests to authenticated;
 create policy viewing_owner_read on public.viewing_requests for select to authenticated using ((select auth.uid()) = user_id);
-create policy viewing_owner_submit on public.viewing_requests for insert to authenticated with check ((select auth.uid()) = user_id and status = 'pending');
 
 create table public.listing_submissions (
   id uuid primary key default gen_random_uuid(),
@@ -81,9 +80,8 @@ create table public.listing_submissions (
 create index listing_submissions_owner on public.listing_submissions(user_id, created_at desc);
 alter table public.listing_submissions enable row level security;
 revoke all on public.listing_submissions from anon, authenticated;
-grant select, insert on public.listing_submissions to authenticated;
+grant select on public.listing_submissions to authenticated;
 create policy listing_owner_read on public.listing_submissions for select to authenticated using ((select auth.uid()) = user_id);
-create policy listing_owner_submit on public.listing_submissions for insert to authenticated with check ((select auth.uid()) = user_id and status = 'pending');
 
 create table private.request_budgets (
   bucket text not null,
