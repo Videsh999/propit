@@ -51,18 +51,16 @@ export function LocalityMarker({
           "flex items-center gap-2 rounded-full border py-1 shadow-[var(--e1)]",
           compact ? "pl-1.5 pr-1.5" : "pl-3 pr-1.5",
           "transition-colors duration-[180ms]",
-          // The design fills the pin with the brand accent and lightens the badge,
-          // which reads far better over a busy basemap than a white pill did.
+          // Keep the city view quiet; reserve a filled marker for the selected area.
           selected
-            ? "border-[var(--accent-deep)] bg-[var(--accent-deep)]"
-            : "border-[var(--accent)] bg-[var(--accent)] group-hover:border-[var(--accent-deep)] group-hover:bg-[var(--accent-deep)]",
+            ? "border-accent bg-accent text-accent-ink"
+            : "border-line-strong bg-raised text-[var(--accent-deep)] group-hover:border-accent group-hover:bg-accent-wash",
         )}
       >
         {!compact && (
           <span
             className={cn(
               "whitespace-nowrap text-[12px] font-medium leading-none tracking-[-0.01em]",
-              "text-[var(--accent-ink)]",
             )}
           >
             {name}
@@ -71,7 +69,9 @@ export function LocalityMarker({
         <span
           className={cn(
             "tnum grid min-w-[22px] place-items-center rounded-full px-1.5 py-[3px] text-[11px] font-semibold leading-none",
-            "bg-[color-mix(in_srgb,var(--accent-ink)_92%,transparent)] text-[var(--accent-deep)]",
+            selected
+              ? "bg-white/90 text-[#344e43]"
+              : "bg-accent-wash text-accent",
           )}
         >
           {count}
@@ -95,7 +95,7 @@ export function LocalityMarker({
         aria-hidden
         className={cn(
           "absolute left-1/2 top-full h-1.5 w-px -translate-x-1/2",
-          selected ? "bg-[var(--accent-deep)]" : "bg-[var(--accent)]",
+          selected ? "bg-accent" : "bg-line-strong",
         )}
       />
     </motion.button>

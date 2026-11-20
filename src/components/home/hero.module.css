@@ -79,7 +79,7 @@
 .card { display: block; overflow: hidden; border: 1px solid var(--line); border-radius: 20px; background: var(--paper-raised); box-shadow: var(--e1); transition: box-shadow 220ms, transform 220ms, border-color 220ms; }
 .cardVisual { position: relative; overflow: hidden; }
 .cardImage { width: 100%; aspect-ratio: 16 / 11; transition: transform 650ms var(--ease); }
-.cardBadge { position: absolute; bottom: 15px; left: 16px; padding: 6px 10px; border-radius: 7px; background: #fffdf5ed; color: #5b432b; backdrop-filter: blur(10px); font-size: 11px; font-weight: 650; }
+.cardBadge { position: absolute; bottom: 15px; left: 16px; padding: 6px 10px; border-radius: 7px; background: #ffffffed; color: #3e5c50; backdrop-filter: blur(10px); font-size: 11px; font-weight: 650; }
 .cardBody { min-width: 0; padding: 22px 20px 16px; }
 .cardBody strong { display: block; font-family: var(--font-display); font-size: 30px; font-weight: 650; letter-spacing: -.055em; line-height: 1.12; }
 .cardTitle { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; min-height: 44px; line-height: 1.4; margin-top: 10px; overflow: hidden; text-overflow: ellipsis; white-space: normal; font-family: var(--font-sans); font-size: 16px; font-weight: 600; letter-spacing: -.025em; }
@@ -103,13 +103,13 @@
 .localityRail { grid-auto-columns: clamp(224px,22vw,295px); }
 .projectRail { grid-auto-columns: minmax(300px,1fr); }
 .localityRail li, .projectRail li { min-width: 0; scroll-snap-align: start; }
-.localityCard { display: block; position: relative; overflow: hidden; height: 350px; border-radius: 17px; background: #302b25; color: #fff; }
+.localityCard { display: block; position: relative; overflow: hidden; height: 350px; border-radius: 17px; background: #2f463b; color: #fff; }
 .tileImage, .localityCard::after { position: absolute; inset: 0; }
-.localityCard::after { content: ''; background: linear-gradient(180deg,#302b2505 20%,#302b2533 50%,#272016e6); }
+.localityCard::after { content: ''; background: linear-gradient(180deg,#2f463b05 20%,#2f463b33 50%,#233a2de6); }
 .localityInfo { position: absolute; z-index: 1; right: 17px; bottom: 23px; left: 20px; }
 .localityInfo h3 { font-family: var(--font-editorial); font-size: 29px; font-weight: 400; letter-spacing: -.04em; line-height: 1.1; }
 .localityInfo p { margin-top: 12px; font-size: 14px; font-weight: 600; }
-.localityInfo span { display: block; margin-top: 3px; color: #eee4d3; font-size: 12px; font-weight: 400; }
+.localityInfo span { display: block; margin-top: 3px; color: #e4eee7; font-size: 12px; font-weight: 400; }
 .tileArrow { position: absolute; z-index: 1; top: 14px; right: 14px; border-radius: 50%; padding: 8px; box-sizing: content-box; border: 1px solid #ffffff50; background: #ffffff1a; }
 .projectCard { display: block; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 17px; background: var(--paper-raised); }
 .projectImage { width: 100%; aspect-ratio: 16 / 11; }

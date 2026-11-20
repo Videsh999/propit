@@ -7,12 +7,12 @@
  * smudge — and a raster would also soften on every non-integer device ratio.
  *
  * So this keeps what is legible at that size and discards what is not: the
- * puzzle-seamed globe, the stone-and-bronze continents, and the gold ring passing
+ * puzzle-seamed globe, the sage-and-pearl continents, and the gold ring passing
  * behind the globe and back across its face. The ring is two arcs of one ellipse
  * with the sphere drawn between them, which is what sells the orbit as passing
  * *through* rather than sitting on top.
  *
- * The stone and champagne mark stays consistent in both themes: the mark is the one element
+ * The sage and pearl mark stays consistent in both themes: the mark is the one element
  * on the page that should not restyle itself. It carries its own contrast
  * against either ground.
  */
@@ -28,17 +28,17 @@ export function PropitMark({ className }: { className?: string }) {
     >
       <defs>
         <linearGradient id="pi-gold" x1="6" y1="18" x2="58" y2="46" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#E9D8B9" />
-          <stop offset="0.45" stopColor="#C5A574" />
-          <stop offset="1" stopColor="#8A673D" />
+          <stop stopColor="#DAE6DB" />
+          <stop offset="0.45" stopColor="#B1C7B6" />
+          <stop offset="1" stopColor="#6B8477" />
         </linearGradient>
         <linearGradient id="pi-ocean" x1="14" y1="12" x2="50" y2="52" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#72695B" />
-          <stop offset="1" stopColor="#3B342A" />
+          <stop stopColor="#86A397" />
+          <stop offset="1" stopColor="#4E6F62" />
         </linearGradient>
         <linearGradient id="pi-land" x1="16" y1="14" x2="48" y2="50" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#E3D8C4" />
-          <stop offset="1" stopColor="#B8A78A" />
+          <stop stopColor="#E6EEE4" />
+          <stop offset="1" stopColor="#B4CDB9" />
         </linearGradient>
         {/* Everything continental is cut to the sphere, so the shapes can be
             drawn loosely and still meet the edge cleanly. */}
