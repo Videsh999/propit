@@ -8,6 +8,8 @@ import { Logo } from "@/components/nav/logo";
 import { cn } from "@/lib/utils";
 import { useDiscovery } from "@/store/discovery";
 import { Link000 } from "@/components/ui/skiper-ui/skiper40";
+import { useCustomer } from "@/components/auth/auth-provider";
+import { authPageHref } from "@/lib/auth/email-link";
 
 const LINKS = [
   { href: "/search?type=buy", label: "Buy", match: "/search" },
@@ -18,8 +20,10 @@ const LINKS = [
 ];
 
 export function Navbar() {
+  const customer = useCustomer();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const accountNext = pathname === "/login" || pathname === "/signup" ? searchParams.get("next") ?? "/profile" : pathname + (searchParams.size ? `?${searchParams}` : "");
   const compareCount = useDiscovery((state) => state.compareIds.length);
   const [mobileOpen, setMobileOpen] = useState(false);
   const setPaletteOpen = useDiscovery((s) => s.setPaletteOpen);
@@ -79,6 +83,8 @@ export function Navbar() {
             {compareCount > 0 && <span>{compareCount}</span>}
           </Link>
 
+          {!customer.loading && !customer.user && <Link href={authPageHref("login", accountNext)} className="hidden h-9 items-center rounded-full bg-accent px-4 text-[13px] font-semibold text-accent-ink transition-colors hover:bg-accent-hover lg:inline-flex">Log in</Link>}
+
           <Link
             href="/profile"
             className="grid h-9 w-9 place-items-center rounded-full border border-line bg-raised text-muted transition-colors hover:border-line-strong hover:text-ink"
@@ -113,6 +119,10 @@ export function Navbar() {
               </li>
             ))}
           </ul>
+          {!customer.loading && !customer.user && <div className="mt-2 grid grid-cols-2 gap-2 border-t border-line pt-3">
+            <Link href={authPageHref("login", accountNext)} onClick={() => setMobileOpen(false)} className="flex min-h-11 items-center justify-center rounded-xl border border-line text-sm font-semibold text-ink">Log in</Link>
+            <Link href={authPageHref("signup", accountNext)} onClick={() => setMobileOpen(false)} className="flex min-h-11 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-ink">Create account</Link>
+          </div>}
         </div>
       )}
     </header>

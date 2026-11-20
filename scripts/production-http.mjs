@@ -20,6 +20,14 @@ assert.ok(nextHome.headers.get("cache-control")?.includes("no-store"));
 assert.equal((await request("/api/health")).status, 200);
 
 const json = { "content-type": "application/json" };
+const loginHtml = await (await request("/login?next=%2Fproperty%2Fselected-home")).text();
+const signupHtml = await (await request("/signup?next=%2Fproperty%2Fselected-home")).text();
+assert.ok(/<input[^>]*id="auth-email"/.test(loginHtml));
+assert.ok(!/<input[^>]*id="auth-name"/.test(loginHtml));
+assert.ok(/<input[^>]*id="auth-name"/.test(signupHtml));
+assert.ok(loginHtml.includes('/signup?next=%2Fproperty%2Fselected-home'));
+assert.ok(signupHtml.includes('/login?next=%2Fproperty%2Fselected-home'));
+assert.ok(loginHtml.includes('noindex') && signupHtml.includes('noindex'));
 assert.equal((await request("/api/search/natural", { method: "POST", headers: { ...json, origin: base, "sec-fetch-site": "same-origin" }, body: JSON.stringify({ query: "3 BHK in Kokapet" }) })).status, 200, "Same-origin forms work on the actual local host");
 for (const path of ["/api/meetings", "/api/listings", "/api/ai/chat", "/api/search/natural", "/api/properties/zone", "/api/account/state"]) {
   const response = await request(path, { method: path.endsWith("state") ? "PUT" : "POST", headers: { ...json, origin: "https://evil.test", "sec-fetch-site": "cross-site" }, body: "{}" });

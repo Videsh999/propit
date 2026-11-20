@@ -250,6 +250,8 @@ const pages = [
   ["/sell", "Put it exactly where it is"],
   ["/about", "verified"],
   ["/profile", "Everything you"],
+  ["/login", "Welcome home."],
+  ["/signup", "Make yourself at home."],
   ["/compare", "PropIT"],
   ["/sitemap.xml", "locality/kokapet"],
   ["/robots.txt", "Disallow: /"],

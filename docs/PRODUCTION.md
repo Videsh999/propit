@@ -7,6 +7,13 @@ durable viewing/listing submissions, and production request protection. Local pr
 to use labelled generated inventory. A database choice alone does not turn this into real inventory.
 Do not publish generated listings, registration numbers, reviews, floor plans or prices as real data.
 
+Customer entry points are `/login` and `/signup`. Email login only accepts existing accounts;
+sign-up explicitly permits account creation and records the supplied display name. Both offer Google
+and preserve a safe return destination through email confirmation or OAuth. The forms include resend
+cooldowns, recoverable expired-link messages and accessible loading states. Account controls remain
+disabled until valid public configuration is present. Per the owner's instruction, hosted Supabase
+setup is deferred to the owner; this implementation does not provision or change that service.
+
 The production launch requires the actual PropIT Supabase project, server environment values,
 approved listing data, real email/Google tests and an enquiry handling owner. The current migration
 is additive but must be reviewed against existing tables before it is applied to an existing database.

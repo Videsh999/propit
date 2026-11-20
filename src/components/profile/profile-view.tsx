@@ -53,7 +53,7 @@ export function ProfileView() {
           {customer.user ? "Your saved homes and searches sync securely with your account." : "Keep homes and searches here, or sign in to sync them across devices."}
         </p>
         <div className="mt-5 flex flex-wrap items-center gap-4 text-sm">
-          {customer.loading ? <p className="text-muted" role="status">Checking your account…</p> : customer.user ? <><span>{customer.user.email ?? "Signed in"}</span><form action="/auth/signout" method="post"><button className="min-h-11 font-semibold text-accent">Sign out</button></form></> : <Link href="/login?next=/profile" className="inline-flex min-h-11 items-center rounded-xl bg-accent px-5 font-semibold text-accent-ink">Sign in</Link>}
+          {customer.loading ? <p className="text-muted" role="status">Checking your account…</p> : customer.user ? <><span>{customer.user.email ?? "Signed in"}</span><form action="/auth/signout" method="post"><button className="min-h-11 font-semibold text-accent">Sign out</button></form></> : <><Link href="/login?next=/profile" className="inline-flex min-h-11 items-center rounded-xl bg-accent px-5 font-semibold text-accent-ink">Log in</Link><Link href="/signup?next=/profile" className="inline-flex min-h-11 items-center font-semibold text-accent">Create an account</Link></>}
         </div>
         {customer.syncError && <p className="mt-3 text-sm text-muted" role="status">{customer.syncError} <button className="min-h-11 font-semibold text-accent" onClick={() => window.dispatchEvent(new Event("propit:retry-sync"))}>Retry sync</button></p>}
       </header>

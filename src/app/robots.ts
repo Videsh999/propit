@@ -6,7 +6,7 @@ const BASE = SITE_ORIGIN;
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: isProductionDeployment() ? [{ userAgent: "*", allow: "/", disallow: ["/api/", "/profile", "/compare", "/login", "/auth/"] }] : [{ userAgent: "*", disallow: "/" }],
+    rules: isProductionDeployment() ? [{ userAgent: "*", allow: "/", disallow: ["/api/", "/profile", "/compare", "/login", "/signup", "/auth/"] }] : [{ userAgent: "*", disallow: "/" }],
     ...(isProductionDeployment() ? { sitemap: `${BASE}/sitemap.xml` } : {}),
   };
 }
