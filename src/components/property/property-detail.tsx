@@ -175,7 +175,7 @@ export function PropertyDetail({
           </header>
 
           <nav aria-label="Property sections" className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-y border-line py-3 text-[13px] font-semibold text-accent">
-            {sections.map(([id, label]) => <a key={id} href={`#${id}`} className="hover:underline">{label}</a>)}
+            {sections.map(([id, label]) => <Link key={id} href={`#${id}`} className="hover:underline">{label}</Link>)}
           </nav>
           <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-[var(--r-md)] border border-line bg-[var(--line)] sm:grid-cols-3">
             {isResidential && <>

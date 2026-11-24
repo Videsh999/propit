@@ -224,7 +224,7 @@ export function Hero({ localities, mapProjects, initialResults, prime, projects 
                 className="bottom-[76px] max-h-[min(480px,calc(100%-88px))] max-sm:fixed max-sm:max-h-[calc(100dvh-156px)] [@media(max-height:570px)]:fixed [@media(max-height:570px)]:max-h-[calc(100dvh-156px)]" />
             )}
           </AnimatePresence>
-          <a className={styles.browseLink} href="#explore"><Grid2X2 size={15} aria-hidden="true" /> Browse homes</a>
+          <Link className={styles.browseLink} href="#explore"><Grid2X2 size={15} aria-hidden="true" /> Browse homes</Link>
         </div>
       </section>
       <FilterBar hideInline />
