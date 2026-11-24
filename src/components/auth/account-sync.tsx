@@ -65,7 +65,7 @@ export function AccountSync({ userId, loading, configured, onError }: { userId: 
       await setDiscoveryOwner(userId);
       if (stopped || !userId) { if (!stopped) onError(null); return; }
       unsubscribe = useDiscovery.subscribe((current, previous) => {
-        if (current.savedIds !== previous.savedIds || current.compareIds !== previous.compareIds || current.recentIds !== previous.recentIds || current.savedSearches !== previous.savedSearches) schedule();
+        if (current.savedIds !== previous.savedIds || current.savedProjectIds !== previous.savedProjectIds || current.compareIds !== previous.compareIds || current.recentIds !== previous.recentIds || current.savedSearches !== previous.savedSearches) schedule();
       });
       window.addEventListener("online", retry); window.addEventListener("propit:retry-sync", retry);
       await flush();

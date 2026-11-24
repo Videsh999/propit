@@ -75,6 +75,7 @@ interface DiscoveryState {
 
   compareIds: string[];
   savedIds: string[];
+  savedProjectIds: string[];
   recentIds: string[];
   savedSearches: SavedSearch[];
 
@@ -118,6 +119,7 @@ interface DiscoveryState {
   addToCompare: (id: string) => void;
   clearCompare: () => void;
   toggleSaved: (id: string) => void;
+  toggleSavedProject: (id: string) => void;
   pushRecent: (id: string) => void;
   saveSearch: (name: string) => void;
   removeSavedSearch: (id: string) => void;
@@ -171,6 +173,7 @@ export const useDiscovery = create<DiscoveryState>()(
 
     compareIds: [],
     savedIds: [],
+    savedProjectIds: [],
     recentIds: [],
     savedSearches: [],
 
@@ -283,6 +286,7 @@ export const useDiscovery = create<DiscoveryState>()(
         : { compareIds: [...s.compareIds, id] },
     ),
     clearCompare: () => set({ compareIds: [] }),
+    toggleSavedProject: (id) => set((s) => ({ savedProjectIds: s.savedProjectIds.includes(id) ? s.savedProjectIds.filter(value => value !== id) : [...s.savedProjectIds, id].slice(-100) })),
     toggleSaved: (id) =>
       set((s) => ({
         savedIds: s.savedIds.includes(id) ? s.savedIds.filter((x) => x !== id) : [...s.savedIds, id].slice(-200),
@@ -342,6 +346,7 @@ export const useDiscovery = create<DiscoveryState>()(
        */
       partialize: (s) => ({
         savedIds: s.savedIds,
+        savedProjectIds: s.savedProjectIds,
         savedSearches: s.savedSearches,
         recentIds: s.recentIds,
         compareIds: s.compareIds,

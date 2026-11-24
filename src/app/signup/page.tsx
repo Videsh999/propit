@@ -11,5 +11,5 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   const next = safeNextPath(params.next);
   const configured = !!supabaseConfig();
   if (configured && await verifiedUser()) redirect(next);
-  return <main><AuthForm mode="signup" next={next} configured={configured} /></main>;
+  return <main><AuthForm mode="signup" next={next} /></main>;
 }

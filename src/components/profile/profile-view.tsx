@@ -13,11 +13,13 @@ import { useStoreHydrated } from "@/lib/hooks/use-hydrated";
 import { formatPrice, formatRent, formatPriceSqft } from "@/lib/format";
 import type { Property } from "@/types";
 import { useCustomer } from "@/components/auth/auth-provider";
+import { SavedProjects } from "@/components/profile/saved-projects";
 
-type Tab = "saved" | "searches" | "anchors" | "recent" | "compare";
+type Tab = "saved" | "projects" | "searches" | "anchors" | "recent" | "compare";
 
 const TABS: { id: Tab; label: string; icon: typeof Heart }[] = [
   { id: "saved", label: "Saved homes", icon: Heart },
+  { id: "projects", label: "Saved projects", icon: Bookmark },
   { id: "searches", label: "Saved searches", icon: Bookmark },
   { id: "anchors", label: "Your anchors", icon: MapPin },
   { id: "compare", label: "Comparison", icon: Scale },
@@ -28,7 +30,7 @@ export function ProfileView() {
   const customer = useCustomer();
   const router = useRouter();
   const {
-    savedIds, savedSearches, anchors, recentIds, compareIds,
+    savedIds, savedProjectIds, savedSearches, anchors, recentIds, compareIds,
     toggleSaved, removeSavedSearch, applySavedSearch, removeAnchor, clearCompare, setAnchorsOpen,
   } = useDiscovery();
   const [tab, setTab] = useState<Tab>("saved");
@@ -36,6 +38,7 @@ export function ProfileView() {
 
   const counts: Record<Tab, number> = {
     saved: savedIds.length,
+    projects: savedProjectIds.length,
     searches: savedSearches.length,
     anchors: anchors.length,
     compare: compareIds.length,
@@ -96,6 +99,7 @@ export function ProfileView() {
           />
         )}
 
+        {hydrated && tab === "projects" && <SavedProjects />}
         {hydrated && tab === "recent" && (
           <PropertyGrid ids={recentIds} empty="Homes you open will appear here." />
         )}

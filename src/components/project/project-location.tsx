@@ -25,7 +25,7 @@ export function ProjectLocation({ name, origin, places }: {
   const categories = CATEGORIES.map((category) => {
     const matches = places.filter(({ category: type }) => category.types.includes(type));
     const airport = matches.find(({ category: type }) => type === "airport");
-    const nearby = matches.filter((place) => place !== airport).slice(0, airport ? 4 : 5);
+    const nearby = matches.filter((place) => place !== airport).slice(0, airport ? 2 : 3);
     return {
       ...category,
       places: (airport ? [...nearby, airport] : nearby).sort((a, b) => a.minutes - b.minutes),
@@ -38,11 +38,11 @@ export function ProjectLocation({ name, origin, places }: {
 
   return (
     <div className="mt-5">
-      <div role="group" aria-label="Nearby categories" className="flex gap-1.5 overflow-x-auto pb-2">
+      <div role="group" aria-label="Nearby categories" className="mb-4 flex gap-5 overflow-x-auto border-b border-line">
         {categories.map(({ id, label, icon: Icon }) => (
           <button key={id} type="button" aria-pressed={active.id === id}
             onClick={() => { setCategoryId(id); setPlaceId(null); }}
-            className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-line bg-paper px-3 text-xs font-semibold transition-colors hover:border-accent aria-pressed:border-accent aria-pressed:bg-accent-wash aria-pressed:text-accent">
+            className="inline-flex min-h-12 shrink-0 items-center gap-1.5 border-b-2 border-transparent px-1 text-xs font-semibold uppercase tracking-[.06em] text-muted transition-colors hover:text-accent aria-pressed:border-accent aria-pressed:text-accent">
             <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
             {label}
           </button>
@@ -58,19 +58,22 @@ export function ProjectLocation({ name, origin, places }: {
             {active.places.map((place) => (
               <li key={place.id}>
                 <button type="button" aria-pressed={place.id === selected.id} onClick={() => setPlaceId(place.id)}
-                  className="grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-paper aria-pressed:bg-accent-wash sm:px-3">
+                  className="grid min-h-16 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-md px-2 py-3 text-left hover:bg-paper aria-pressed:bg-accent-wash sm:px-3">
                   <span className="min-w-0">
                     <span className="block break-words text-sm font-semibold leading-snug">{place.name}</span>
-                    <span className="mt-0.5 block text-xs text-muted">{place.kind} · {formatDistance(place.distanceKm)}</span>
                   </span>
                   <span className="tnum whitespace-nowrap text-sm font-semibold text-accent">~{formatMinutes(Math.max(1, place.minutes))}</span>
                 </button>
               </li>
             ))}
           </ul>
-          <p className="mt-2 px-2 text-xs leading-relaxed text-muted">Times are estimated from straight-line distance and don’t account for traffic.</p>
+          <p className="mt-3 px-2 text-xs leading-relaxed text-muted">Estimated from straight-line distance; traffic not included.</p>
         </div>
-        <TravelDiagram name={name} origin={origin} places={active.places} selected={selected} onSelect={setPlaceId} />
+        <div className="hidden min-w-0 min-[1100px]:block"><TravelDiagram name={name} origin={origin} places={active.places} selected={selected} onSelect={setPlaceId} /></div>
+        <details className="min-w-0 rounded-2xl border border-line bg-paper p-3 min-[1100px]:hidden">
+          <summary className="cursor-pointer text-sm font-semibold text-accent">View connectivity diagram</summary>
+          <div className="mt-3"><TravelDiagram name={name} origin={origin} places={active.places} selected={selected} onSelect={setPlaceId} /></div>
+        </details>
       </div>
     </div>
   );
@@ -97,7 +100,7 @@ function TravelDiagram({ name, origin, places, selected, onSelect }: {
   return (
     <figure className="luxury-surface min-w-0 self-start rounded-2xl border border-line px-3 pb-3 pt-4 text-ink">
       <figcaption className="flex items-center justify-between gap-2 px-1 text-xs font-semibold">
-        <span>Drive time from {name}</span>
+        <span>Approximate travel time</span>
         <span aria-hidden="true" className="shrink-0 text-[11px] text-muted">↑ N</span>
       </figcaption>
       <div className="relative mx-auto aspect-square max-w-[310px]">
@@ -130,7 +133,7 @@ function TravelDiagram({ name, origin, places, selected, onSelect }: {
         <span className="min-w-0 break-words">{selected.name}</span>
         <span className="tnum shrink-0 font-semibold text-accent">~{formatMinutes(Math.max(1, selected.minutes))}</span>
       </p>
-      <p className="mt-2 px-1 text-[11px] text-muted">Dots show direction and estimated time.</p>
+      <p className="mt-2 px-1 text-[11px] text-muted">From {name} · {formatDistance(selected.distanceKm)}</p>
     </figure>
   );
 }

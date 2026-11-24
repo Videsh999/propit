@@ -28,17 +28,17 @@ export function PropitMark({ className }: { className?: string }) {
     >
       <defs>
         <linearGradient id="pi-gold" x1="6" y1="18" x2="58" y2="46" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#DAE6DB" />
-          <stop offset="0.45" stopColor="#B1C7B6" />
-          <stop offset="1" stopColor="#6B8477" />
+          <stop stopColor="#E9E1D1" />
+          <stop offset="0.45" stopColor="#C4B28F" />
+          <stop offset="1" stopColor="#92764E" />
         </linearGradient>
         <linearGradient id="pi-ocean" x1="14" y1="12" x2="50" y2="52" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#86A397" />
-          <stop offset="1" stopColor="#4E6F62" />
+          <stop stopColor="#B79B71" />
+          <stop offset="1" stopColor="#76583A" />
         </linearGradient>
         <linearGradient id="pi-land" x1="16" y1="14" x2="48" y2="50" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#E6EEE4" />
-          <stop offset="1" stopColor="#B4CDB9" />
+          <stop stopColor="#F2EAD8" />
+          <stop offset="1" stopColor="#CBB98E" />
         </linearGradient>
         {/* Everything continental is cut to the sphere, so the shapes can be
             drawn loosely and still meet the edge cleanly. */}
@@ -82,7 +82,7 @@ export function PropitMark({ className }: { className?: string }) {
             one across, meeting off-centre so the eye reads interlocking pieces
             instead of quadrants.
         */}
-        <g stroke="#F2F6F9" strokeWidth="1.15" opacity="0.85" fill="none" strokeLinecap="round">
+        <g stroke="#FCF8F0" strokeWidth="1.15" opacity="0.85" fill="none" strokeLinecap="round">
           <path d="M24 10 v6.5 a3.4 3.4 0 0 0 0 6.6 V31 a3.4 3.4 0 0 1 0 6.6 V52" />
           <path d="M11 24.5 h7.5 a3.4 3.4 0 0 1 6.6 0 H38 a3.4 3.4 0 0 0 6.6 0 H52" />
         </g>

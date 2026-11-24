@@ -196,6 +196,16 @@ const selected = await get("/api/properties/by-id?ids=" + encodeURIComponent(sel
 expect(selected.status === 200 && selected.json.items.map(({ id }) => id).join(",") === selectedIds.join(","),
   "comparison details preserve the selected listing order");
 
+console.log("\nSAVED PROJECTS");
+const projectIds = [...new Set(selected.json.items.map(item => item.projectId).filter(Boolean))];
+const savedProjects = await get("/api/projects/by-id?ids=" + encodeURIComponent(projectIds.join(",")));
+expect(projectIds.length > 0 && savedProjects.status === 200 && savedProjects.json.items.map(item => item.id).join(",") === projectIds.join(","),
+  "saved projects return compact summaries in selection order");
+expect((await get("/api/projects/by-id?ids=unknown-project")).json.items.length === 0,
+  "unavailable saved projects are handled safely");
+expect((await get("/api/projects/by-id?ids=" + Array.from({ length: 101 }, (_, i) => `project-${i}`).join(","))).status === 400,
+  "saved project requests reject excessive IDs");
+
 console.log("\nINPUT VALIDATION");
 const world = "?west=-180&south=-90&east=180&north=90";
 const worldResults = await get("/api/properties" + world + "&limit=0&clusters=0");

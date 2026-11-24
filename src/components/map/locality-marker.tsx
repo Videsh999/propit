@@ -51,10 +51,10 @@ export function LocalityMarker({
           "flex items-center gap-2 rounded-full border py-1 shadow-[var(--e1)]",
           compact ? "pl-1.5 pr-1.5" : "pl-3 pr-1.5",
           "transition-colors duration-[180ms]",
-          // Keep the city view quiet; reserve a filled marker for the selected area.
+          // Bronze locality labels echo the atlas controls and stay legible over roads.
           selected
             ? "border-accent bg-accent text-accent-ink"
-            : "border-line-strong bg-raised text-[var(--accent-deep)] group-hover:border-accent group-hover:bg-accent-wash",
+            : "border-accent bg-accent text-accent-ink group-hover:border-accent-hover group-hover:bg-accent-hover",
         )}
       >
         {!compact && (
@@ -69,9 +69,7 @@ export function LocalityMarker({
         <span
           className={cn(
             "tnum grid min-w-[22px] place-items-center rounded-full px-1.5 py-[3px] text-[11px] font-semibold leading-none",
-            selected
-              ? "bg-white/90 text-[#344e43]"
-              : "bg-accent-wash text-accent",
+            "bg-raised text-accent-deep",
           )}
         >
           {count}

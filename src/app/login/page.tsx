@@ -11,5 +11,5 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const next = safeNextPath(params.next);
   const configured = !!supabaseConfig();
   if (configured && await verifiedUser()) redirect(next);
-  return <main><AuthForm mode="login" next={next} configured={configured} expired={!!params.error} /></main>;
+  return <main><AuthForm mode="login" next={next} expired={!!params.error} /></main>;
 }

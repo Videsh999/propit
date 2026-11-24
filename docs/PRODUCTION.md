@@ -2,7 +2,7 @@
 
 ## Release status
 
-The application now has Supabase email/Google sign-in, per-account saved homes and searches,
+The application now has Supabase email/Google sign-in, per-account saved homes, projects and searches,
 durable viewing/listing submissions, and production request protection. Local previews continue
 to use labelled generated inventory. A database choice alone does not turn this into real inventory.
 Do not publish generated listings, registration numbers, reviews, floor plans or prices as real data.
@@ -10,9 +10,10 @@ Do not publish generated listings, registration numbers, reviews, floor plans or
 Customer entry points are `/login` and `/signup`. Email login only accepts existing accounts;
 sign-up explicitly permits account creation and records the supplied display name. Both offer Google
 and preserve a safe return destination through email confirmation or OAuth. The forms include resend
-cooldowns, recoverable expired-link messages and accessible loading states. Account controls remain
-disabled until valid public configuration is present. Per the owner's instruction, hosted Supabase
-setup is deferred to the owner; this implementation does not provision or change that service.
+cooldowns, recoverable expired-link messages and accessible loading states. The forms show normal
+login and sign-up controls; missing service configuration produces a recoverable error on submission.
+The connected account still does not expose the owner's PropIT project. Live authentication and
+data verification require access to that project; unrelated databases must not be repurposed.
 
 The production launch requires the actual PropIT Supabase project, server environment values,
 approved listing data, real email/Google tests and an enquiry handling owner. The current migration
@@ -92,7 +93,7 @@ the previously approved snapshot ID through a secure operator context. Customer 
 
 ## Customer flows and operations
 
-Saved homes, recent properties, comparison and saved searches sync to `customer_states`. Local browser
+Saved homes, saved projects, recent properties, comparison and saved searches sync to `customer_states`. Local browser
 namespaces are separate per account; guest data is separate. Optimistic versions rebase concurrent edits.
 Unsynced changes remain on the current device and show a retry message. Browsing anchors are transient;
 anchors inside an explicitly saved search sync as part of that search.

@@ -15,6 +15,7 @@ import { ProjectCard } from "@/components/cards/project-card";
 import { ProjectAmenities } from "@/components/project/project-amenities";
 import { ProjectInventory } from "@/components/project/project-inventory";
 import { ProjectLocation } from "@/components/project/project-location";
+import { DetailActions } from "@/components/property/detail-actions";
 import { POI_CATEGORY_SINGULAR } from "@/lib/data/pois";
 import { formatArea, formatCount, formatPrice, projectStatusLabel } from "@/lib/format";
 import type { Project, ProjectSpecification } from "@/types";
@@ -115,6 +116,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="mx-auto max-w-[1440px] px-4 pb-14 pt-5 sm:px-8">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><Link href="/projects" className="text-sm font-medium text-muted hover:text-accent">← All projects</Link><DetailActions kind="project" id={project.id} slug={project.slug} title={project.name} /></div>
       <div className="relative isolate overflow-hidden rounded-[var(--r-canvas)] bg-accent-deep text-white">
         <Img src={project.heroImage} alt={project.name} className="h-[360px] w-full md:h-[460px]" priority sizes="100vw" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
@@ -187,6 +189,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
           </Section>
 
           <Section id="amenities" title="Amenities & clubhouse">
+            <p className="mb-4 max-w-[52ch] text-sm leading-relaxed text-muted">Make room for the things you love. Explore the amenities listed for this project.</p>
             <Facts rows={[["Clubhouse size", profile.clubhouseSqft == null ? null : formatArea(profile.clubhouseSqft)]]} />
             <ProjectAmenities amenities={project.amenities} />
           </Section>
@@ -250,7 +253,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 }
 
 function Section({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
-  return <section id={id} className="scroll-mt-3 rounded-[var(--r-lg)] border border-line bg-raised p-4 sm:p-6">
+  const index = SECTIONS.findIndex(([sectionId]) => sectionId === id);
+  return <section id={id} className="scroll-mt-24 rounded-[var(--r-lg)] border border-line bg-raised p-4 sm:p-6">
+    {index >= 0 && <p aria-hidden="true" className="mb-3 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[.16em] text-muted"><span className="h-px w-8 bg-accent-line" />{String(index + 1).padStart(2, "0")} — {SECTIONS[index][1]}</p>}
     <h2 className="mb-4 font-[family-name:var(--font-editorial)] text-[clamp(28px,4vw,38px)] leading-tight tracking-tight">{title}</h2>
     {children}
   </section>;

@@ -9,7 +9,7 @@ import { authCallbackUrl, authPageHref, emailLinkRequest, type AuthMode } from "
 const inputClass = "mt-2 h-12 w-full rounded-xl border border-line bg-paper px-4 text-[16px] text-ink outline-none transition-colors placeholder:text-faint focus:border-accent focus:ring-2 focus:ring-accent-wash disabled:opacity-60";
 const buttonClass = "flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50";
 
-export function AuthForm({ mode, next, configured, expired = false }: { mode: AuthMode; next: string; configured: boolean; expired?: boolean }) {
+export function AuthForm({ mode, next, expired = false }: { mode: AuthMode; next: string; expired?: boolean }) {
   const signup = mode === "signup";
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
@@ -27,7 +27,7 @@ export function AuthForm({ mode, next, configured, expired = false }: { mode: Au
 
   async function sendEmailLink(event?: React.FormEvent) {
     event?.preventDefault();
-    if (!configured || submitting.current || coolingDown) return;
+    if (submitting.current || coolingDown) return;
     const database = browserDatabase();
     if (!database) { setError("Sign-in is temporarily unavailable. Please try again later."); return; }
     submitting.current = true; setBusy("email"); setError(null);
@@ -42,7 +42,7 @@ export function AuthForm({ mode, next, configured, expired = false }: { mode: Au
   }
 
   async function continueWithGoogle() {
-    if (!configured || submitting.current) return;
+    if (submitting.current) return;
     const database = browserDatabase();
     if (!database) { setError("Sign-in is temporarily unavailable. Please try again later."); return; }
     submitting.current = true; setBusy("google"); setError(null);
@@ -75,14 +75,13 @@ export function AuthForm({ mode, next, configured, expired = false }: { mode: Au
         <p className="eyebrow">Your PropIT account</p>
         <h1 id="auth-title" className="display mt-3 text-[36px] leading-tight">{signup ? "Make yourself at home." : "Welcome home."}</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted">{signup ? "Create your account to save, compare and find your next home." : "Log in to your saved homes, searches and enquiries."}</p>
-        {!configured && <p id="auth-availability" role="status" className="mt-5 rounded-xl border border-line bg-sunk p-3 text-xs leading-relaxed text-muted">Account access is coming soon. You can explore every home while we get it ready.</p>}
-        <button type="button" disabled={!configured || !!busy} onClick={() => void continueWithGoogle()} className={`${buttonClass} mt-6 border border-line bg-raised text-ink hover:bg-sunk`} aria-describedby={!configured ? "auth-availability" : undefined}>{busy === "google" ? <Loader2 size={17} className="animate-spin" /> : <GoogleMark />}Continue with Google</button>
+        <button type="button" disabled={!!busy} onClick={() => void continueWithGoogle()} className={`${buttonClass} mt-6 border border-line bg-raised text-ink hover:bg-sunk`}>{busy === "google" ? <Loader2 size={17} className="animate-spin" /> : <GoogleMark />}Continue with Google</button>
         <div className="my-5 flex items-center gap-3" aria-hidden="true"><span className="h-px flex-1 bg-line" /><span className="text-xs text-faint">or continue with email</span><span className="h-px flex-1 bg-line" /></div>
         <form onSubmit={sendEmailLink} aria-label={signup ? "Create your account" : "Log in with email"}>
           {signup && <label className="mb-4 block text-sm font-medium" htmlFor="auth-name">Full name<input id="auth-name" name="name" autoComplete="name" required minLength={2} maxLength={80} value={fullName} onChange={event => setFullName(event.target.value)} disabled={!!busy} className={inputClass} placeholder="Your full name" /></label>}
           <label className="block text-sm font-medium" htmlFor="auth-email">Email address<input id="auth-email" name="email" type="email" autoComplete="email" inputMode="email" required maxLength={254} value={email} onChange={event => setEmail(event.target.value)} disabled={!!busy} className={inputClass} placeholder="you@example.com" /></label>
           <p className="mt-2.5 text-xs leading-relaxed text-muted">We’ll email you a secure link. No password to remember.</p>
-          <button type="submit" disabled={!configured || !!busy || coolingDown} className={`${buttonClass} mt-5 bg-accent text-accent-ink hover:bg-accent-hover`} aria-describedby={!configured ? "auth-availability" : undefined}>{busy === "email" ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}{coolingDown ? `Try again in ${secondsLeft}s` : signup ? "Create account" : "Send login link"}{!busy && !coolingDown && <ArrowRight size={15} className="ml-auto" />}</button>
+          <button type="submit" disabled={!!busy || coolingDown} className={`${buttonClass} mt-5 bg-accent text-accent-ink hover:bg-accent-hover`}>{busy === "email" ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}{coolingDown ? `Try again in ${secondsLeft}s` : signup ? "Create account" : "Send login link"}{!busy && !coolingDown && <ArrowRight size={15} className="ml-auto" />}</button>
         </form>
         <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-faint"><Check size={13} />Secure, password-free access</p>
       </>}

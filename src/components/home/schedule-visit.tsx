@@ -45,9 +45,11 @@ interface Done {
  * someone is on their way when no one is would be the worst kind of lie this
  * product could tell.
  */
-export function ScheduleVisit({ heroImage, propertySlug, initialMode = "site" }: {
+export function ScheduleVisit({ heroImage, propertySlug, projectSlug, hideHeading = false, initialMode = "site" }: {
   heroImage?: string;
   propertySlug?: string;
+  projectSlug?: string;
+  hideHeading?: boolean;
   initialMode?: (typeof MODES)[number]["value"];
 }) {
   const customer = useCustomer();
@@ -72,7 +74,7 @@ export function ScheduleVisit({ heroImage, propertySlug, initialMode = "site" }:
 
     const data = new FormData(e.currentTarget);
     try {
-      const body = JSON.stringify({ name: data.get("name"), phone: data.get("phone"), email: data.get("email") || "", note: data.get("note") || "", date: data.get("date"), mode, slot, propertySlug });
+      const body = JSON.stringify({ name: data.get("name"), phone: data.get("phone"), email: data.get("email") || "", note: data.get("note") || "", date: data.get("date"), mode, slot, propertySlug, projectSlug });
       if (reference.current?.body !== body) reference.current = { body, id: crypto.randomUUID() };
       const res = await fetch("/api/meetings", {
         method: "POST",
@@ -95,8 +97,8 @@ export function ScheduleVisit({ heroImage, propertySlug, initialMode = "site" }:
   }
 
   return (
-    <section className={propertySlug ? "mt-4 border-t border-line pt-4" : "border-t border-line bg-sunk px-5 py-20 md:px-8 md:py-24"}>
-      <div className={propertySlug ? undefined : "mx-auto grid max-w-[1440px] items-stretch gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16"}>
+    <section className={propertySlug || projectSlug ? "mt-4 border-t border-line pt-4" : "border-t border-line bg-sunk px-5 py-20 md:px-8 md:py-24"}>
+      <div className={propertySlug || projectSlug ? undefined : "mx-auto grid max-w-[1440px] items-stretch gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16"}>
         {/* The place you'd be standing in */}
         {heroImage && <Reveal>
           {/* On a phone the photograph is context, not the subject — a banner
@@ -109,7 +111,7 @@ export function ScheduleVisit({ heroImage, propertySlug, initialMode = "site" }:
               sizes="(max-width: 1024px) 100vw, 50vw"
               className="h-full w-full"
             />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[rgba(11,41,35,0.82)] to-transparent p-6 pt-20">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[rgba(73,59,45,0.82)] to-transparent p-6 pt-20">
               <p className="eyebrow text-[var(--data-brass)]">Hyderabad · Site visits</p>
               <p className="mt-2 max-w-[28ch] text-[16px] leading-snug text-white md:text-[18px]">
                 Photographs decide the shortlist. Standing there decides the home.
@@ -120,21 +122,20 @@ export function ScheduleVisit({ heroImage, propertySlug, initialMode = "site" }:
 
         <Reveal delay={0.06}>
           <div className="flex h-full flex-col justify-center">
-            {!propertySlug && <p className="eyebrow mb-3">Schedule a viewing</p>}
-            <h2 className="display text-[32px] leading-[1.05] text-ink md:text-[42px]">
+            {!hideHeading && !propertySlug && !projectSlug && <p className="eyebrow mb-3">Schedule a viewing</p>}
+            {!hideHeading && <h2 className="display text-[32px] leading-[1.05] text-ink md:text-[42px]">
               {propertySlug ? "Request a viewing or callback" : "See it for yourself."}
-            </h2>
+            </h2>}
 
             {done ? (
               <Confirmation done={done} onReset={() => setDone(null)} />
             ) : (
               <>
                 <p className="mt-4 max-w-[46ch] text-[16px] leading-relaxed text-muted">
-                  Pick a day that works. We&apos;ll confirm the address and the exact time before
-                  you travel.
+                  Choose how and when you’d like to talk. Your request will be saved for follow-up.
                 </p>
 
-                {!customer.configured ? <p className="mt-6 rounded-xl border border-line bg-paper p-4 text-sm text-muted">Viewing requests open when the live service is connected.</p> : customer.loading ? <p className="mt-6 text-sm text-muted" role="status">Checking your account…</p> : !customer.user ? <Link href={`/login?${new URLSearchParams({ next: pathname })}`} className="mt-6 inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-semibold text-accent-ink">Sign in to request a viewing</Link> : <form onSubmit={submit} className="mt-8 space-y-6" noValidate>
+                {customer.loading ? <p className="mt-6 text-sm text-muted" role="status">Checking your account…</p> : !customer.user ? <Link href={`/login?${new URLSearchParams({ next: pathname })}`} className="mt-6 inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-semibold text-accent-ink">Log in to send your enquiry</Link> : <form onSubmit={submit} className="mt-8 space-y-6" noValidate>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Your name" name="name" error={fields.name}>
                       <input

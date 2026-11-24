@@ -5,25 +5,28 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import {
-  BedDouble, Bath, Car, Compass, Building2, Calendar, Heart, Share2, MessageCircle, ChevronRight, ChevronLeft, Check, Play, Pause,
+  BedDouble, Bath, Car, Compass, Building2, Calendar, MessageCircle, ChevronRight, ChevronLeft, Play, Pause,
 } from "lucide-react";
 import { FloorPlan } from "@/components/property/floor-plan";
-import { CompareToggle } from "@/components/compare/compare-toggle";
+import { DetailActions } from "@/components/property/detail-actions";
+import { ProjectAmenities } from "@/components/project/project-amenities";
+import { ProjectLocation } from "@/components/project/project-location";
 import { Img } from "@/components/ui/img";
 import { QualityBadge, Tag } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDiscovery } from "@/store/discovery";
 import { POI_CATEGORY_LABEL } from "@/lib/data/pois";
-import { AMENITIES } from "@/lib/data/developers";
 import {
   calcEmi, formatArea, formatPrice, formatPriceSqft, formatRent, furnishingLabel,
   possessionLabel, propertyTypeLabel,
 } from "@/lib/format";
-import type { Developer, Locality, NearbyPlace, PoiCategory, Project, Property } from "@/types";
+import type { Developer, Locality, NearbyPlace, Project, Property } from "@/types";
 import { cn } from "@/lib/utils";
 
-const PropitMap = dynamic(() => import("@/components/map/propit-map").then((module) => module.PropitMap), { ssr: false });
-const ScheduleVisit = dynamic(() => import("@/components/home/schedule-visit").then((module) => module.ScheduleVisit));
+const PropitMap = dynamic(() => import("@/components/map/propit-map").then((module) => module.PropitMap), {
+  ssr: false,
+  loading: () => <p role="status" className="grid h-full w-full place-items-center bg-sunk text-sm text-muted">Loading the property map…</p>,
+});
 
 export function PropertyDetail({
   property, locality, project, developer, similar, nearby,
@@ -35,7 +38,7 @@ export function PropertyDetail({
   similar: (Property & { localityName: string })[];
   nearby: NearbyPlace[];
 }) {
-  const { toggleSaved, savedIds, pushRecent, setAssistantOpen, setViewedProperty, anchors } =
+  const { pushRecent, setAssistantOpen, setViewedProperty, anchors } =
     useDiscovery();
   const [gallery, setGallery] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -59,7 +62,6 @@ export function PropertyDetail({
   const [areaUnit, setAreaUnit] = useState<"ft" | "m">("ft");
   const isPlot = property.propertyType === "plot";
   const isResidential = !isPlot && property.propertyType !== "commercial";
-  const [viewing, setViewing] = useState<"site" | "call" | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapVisible = useInView(mapRef, { once: true, margin: "300px" });
   const mapLocalities = useMemo(() => [locality], [locality]);
@@ -67,7 +69,6 @@ export function PropertyDetail({
     id: property.id, ...property.location, price: property.price,
     bedrooms: property.bedrooms, type: property.propertyType,
   }], [property]);
-  const isSaved = savedIds.includes(property.id);
 
   useEffect(() => {
     pushRecent(property.id);
@@ -87,12 +88,6 @@ export function PropertyDetail({
         { label: "Built-up area", value: property.builtupAreaSqft, description: "Area including walls" },
         { label: "Super built-up area", value: property.superBuiltupAreaSqft, description: "Built-up area plus a share of common areas" },
       ];
-  const amenities = new Map<string, string[]>();
-  for (const slug of new Set(property.amenities)) {
-    const amenity = AMENITIES.find((entry) => entry.slug === slug);
-    const category = amenity?.category ?? "Other amenities";
-    amenities.set(category, [...(amenities.get(category) ?? []), amenity?.name ?? slug]);
-  }
   const sections = [
     ["overview", "Overview"], ["areas", isPlot ? "Plot area" : "Area & floor plan"],
     ["amenities", "Amenities"], ["costs", "Costs"], ["location", "Location"],
@@ -110,6 +105,7 @@ export function PropertyDetail({
             <ChevronRight size={11} />
             <span className="truncate text-muted">{property.title}</span>
           </nav>
+          <div className="mb-4 flex justify-end"><DetailActions kind="property" id={property.id} slug={property.slug} title={property.title} /></div>
 
           <div ref={galleryRef} className="grid gap-2 md:grid-cols-[2fr_1fr]">
             <div className="relative">
@@ -222,16 +218,7 @@ export function PropertyDetail({
           </Section>
 
           <Section id="amenities" title="Amenities">
-            {amenities.size ? <div className="grid gap-3 sm:grid-cols-2">
-              {[...amenities].map(([category, names]) => (
-                <div key={category} className="rounded-[var(--r-md)] border border-line bg-raised p-4">
-                  <h3 className="mb-2 text-[13px] font-semibold text-ink">{category}</h3>
-                  <ul className="space-y-1.5 text-[13px] text-muted">
-                    {names.map((name) => <li key={name} className="flex items-center gap-2"><Check size={14} className="shrink-0 text-accent" aria-hidden="true" />{name}</li>)}
-                  </ul>
-                </div>
-              ))}
-            </div> : <p className="text-sm text-muted">Amenities not supplied for this listing.</p>}
+            <ProjectAmenities amenities={property.amenities} />
           </Section>
 
           <Section id="costs" title="Costs & specifications">
@@ -261,7 +248,7 @@ export function PropertyDetail({
                 ? <PropitMap compact localityScope={locality} followDiscoveryCamera={false} initialCenter={property.location} points={mapPoints} localities={mapLocalities} />
                 : <span className="text-sm text-muted">{property.address}</span>}
             </div>
-            <NearbyGrid places={nearby} />
+            <ProjectLocation name={property.title} origin={property.location} places={nearby.map(place => ({ ...place, kind: POI_CATEGORY_LABEL[place.category] }))} />
           </Section>
 
           {anchors.length > 0 && (
@@ -336,45 +323,7 @@ export function PropertyDetail({
 
             {property.listingType === "buy" && <EmiBlock price={property.price} />}
 
-            <div className="mt-5 space-y-2">
-              <Button variant="primary" size="lg" className="w-full" aria-expanded={viewing === "site"} onClick={() => setViewing(viewing === "site" ? null : "site")}>Schedule a visit</Button>
-              <Button variant="secondary" size="lg" className="w-full" aria-expanded={viewing === "call"} onClick={() => setViewing(viewing === "call" ? null : "call")}>Request a callback</Button>
-              <Button
-                variant="ghost"
-                size="lg"
-                className="w-full gap-1.5"
-                onClick={() => setAssistantOpen(true)}
-              >
-                <MessageCircle size={15} strokeWidth={1.75} />
-                Ask PropIT about this home
-              </Button>
-            </div>
-
-            {viewing && <ScheduleVisit key={viewing} propertySlug={property.slug} initialMode={viewing} />}
-            <div className="mt-4 flex items-center gap-2 border-t border-line pt-4">
-              <button
-                onClick={() => toggleSaved(property.id)}
-                className={cn(
-                  "inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[var(--r-sm)] border text-[13px] transition-colors",
-                  isSaved ? "border-[var(--accent-line)] bg-[var(--accent-wash)] text-accent" : "border-line text-muted hover:text-ink",
-                )}
-              >
-                <Heart size={14} strokeWidth={1.75} fill={isSaved ? "currentColor" : "none"} />
-                {isSaved ? "Saved" : "Save"}
-              </button>
-              <CompareToggle id={property.id} className="h-9 flex-1" />
-              <button
-                onClick={() => {
-                  if (typeof navigator !== "undefined" && navigator.clipboard) {
-                    void navigator.clipboard.writeText(window.location.href);
-                  }
-                }}
-                className="grid h-9 w-9 place-items-center rounded-[var(--r-sm)] border border-line text-muted transition-colors hover:text-ink"
-                aria-label="Copy link"
-              >
-                <Share2 size={14} strokeWidth={1.75} />
-              </button>
-            </div>
+            <Button variant="ghost" size="lg" className="mt-3 w-full gap-1.5" onClick={() => setAssistantOpen(true)}><MessageCircle size={15} />Ask PropIT about this home</Button>
 
             {project && (
               <Link
@@ -397,8 +346,10 @@ export function PropertyDetail({
 }
 
 function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
+  const labels: Record<string, string> = { areas: "01 — Spaces", amenities: "02 — Lifestyle", costs: "03 — Costs", location: "04 — Location" };
   return (
-    <section id={id} className="mt-9 scroll-mt-3">
+    <section id={id} className="mt-7 scroll-mt-24 rounded-[var(--r-lg)] border border-line bg-raised p-4 sm:p-6">
+      {id && labels[id] && <p aria-hidden="true" className="mb-3 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[.16em] text-muted"><span className="h-px w-8 bg-accent-line" />{labels[id]}</p>}
       <h2 className="mb-4 font-[family-name:var(--font-editorial)] text-[30px] leading-tight tracking-[-0.035em] text-ink">{title}</h2>
       {children}
     </section>
@@ -473,41 +424,6 @@ function EmiBlock({ price }: { price: number }) {
   );
 }
 
-function NearbyGrid({ places }: { places: NearbyPlace[] }) {
-  if (!places.length) return null;
-  const groups = new Map<PoiCategory, NearbyPlace[]>();
-  for (const p of places) {
-    const arr = groups.get(p.category);
-    if (arr) arr.push(p);
-    else groups.set(p.category, [p]);
-  }
-  return (
-    <div className="mt-5">
-      <h3 className="eyebrow mb-3">What&apos;s nearby</h3>
-      <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[...groups.entries()].map(([cat, items]) => (
-          <div key={cat}>
-            <div className="mb-1.5 text-[12px] font-medium text-ink">{POI_CATEGORY_LABEL[cat]}</div>
-            <ul className="space-y-1">
-              {items.slice(0, 3).map((p) => (
-                <li key={p.id} className="flex items-baseline justify-between gap-3 text-[13px]">
-                  <span className="min-w-0 truncate text-muted">{p.name.split(",")[0]}</span>
-                  <span className="tnum shrink-0 text-faint">
-                    {p.distanceKm < 1 ? `${Math.round(p.distanceKm * 1000)} m` : `${p.distanceKm} km`}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-      <p className="mt-3 text-[11px] text-faint">
-        Distances are straight-line. Travel times shown elsewhere are estimated until routing is
-        connected.
-      </p>
-    </div>
-  );
-}
 
 function haversine(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const R = 6371.0088;
