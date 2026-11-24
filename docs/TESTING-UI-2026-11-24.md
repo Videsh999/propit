@@ -22,6 +22,8 @@ phones. Its travel times are estimates from straight-line distances, not live ro
   This is local server processing and does not measure public network or third-party tile latency.
 - Light/dark basemap contrast and locally served font stacks passed. Label contrast: 5.00:1 light,
   9.13:1 dark.
+- Secondary and small text meet 4.5:1 on all three light surfaces: 5.30:1 on paper,
+  4.94:1 on inset panels and 4.66:1 on the accent wash.
 
 ## Browser verification
 
