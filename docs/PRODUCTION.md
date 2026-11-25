@@ -51,12 +51,14 @@ browser bundle, so rebuild after changing them. Never paste secrets into chat or
 | `NEXT_PUBLIC_SITE_URL` | Canonical HTTPS origin, no path/query/hash |
 | `NEXT_PUBLIC_SUPABASE_URL` | PropIT project's HTTPS API origin |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public client key; customer access is constrained by RLS |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server only; distributed budgets and operator catalog publication |
+| `SUPABASE_SECRET_KEY` | Server only; distributed budgets and operator catalog publication. The legacy `SUPABASE_SERVICE_ROLE_KEY` is also supported. |
 | `RATE_LIMIT_SECRET` | Server only; cryptographically random, at least 32 characters |
 | `ANTHROPIC_API_KEY` | Optional server-only paid conversational assistant |
 | `ANTHROPIC_MODEL` | Optional supported model ID available to the account |
 
-The service role must never reach client code. Rotating it requires redeployment. The production
+The Supabase/Vercel integration names `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` are also supported. Next compiles only these public values into `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; explicit `NEXT_PUBLIC_` values take precedence. The integration’s `SUPABASE_SECRET_KEY` is read only on the server. A secret key supplied as a publishable key stops the build.
+
+The secret/service-role key must never reach client code. Rotating it requires redeployment. The production
 request identity uses Vercel's platform-overwritten IP header; non-Vercel deployments need a trusted
 proxy identity strategy before production traffic. A request-budget database failure returns 503.
 Paid assistant requests require a verified account and share a global budget. Guests retain grounded

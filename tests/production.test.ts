@@ -11,6 +11,8 @@ test("Vercel production cannot be downgraded to generated preview inventory", as
     process.env.PROPIT_MODE = "preview";
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_PUBLISHABLE_KEY;
     assert.equal(isProductionDeployment(), true);
     await assert.rejects(prepareStore());
     assert.throws(getStore);
@@ -33,7 +35,7 @@ test("launch gate fails closed when required production services are absent", as
   const previous = { ...process.env };
   try {
     process.env.PROPIT_MODE = "production";
-    for (const key of ["NEXT_PUBLIC_SITE_URL", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SERVICE_ROLE_KEY", "RATE_LIMIT_SECRET"]) delete process.env[key];
+    for (const key of ["NEXT_PUBLIC_SITE_URL", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", "RATE_LIMIT_SECRET"]) delete process.env[key];
     assert.equal((await checkProduction()).length, 4);
   } finally { for (const key of Object.keys(process.env)) if (!(key in previous)) delete process.env[key]; Object.assign(process.env, previous); }
 });

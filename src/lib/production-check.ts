@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { configuredOrigin, supabaseConfig } from "./deployment";
+import { configuredOrigin, supabaseConfig, supabaseServerKey } from "./deployment";
 import { catalogSchema } from "./data/catalog-schema";
 
 /** Also used by the Vercel build gate. Never return environment values or customer data. */
@@ -8,8 +8,8 @@ export async function checkProduction(): Promise<string[]> {
   if (!configuredOrigin()) failures.push("NEXT_PUBLIC_SITE_URL must be the canonical HTTPS production origin.");
   const config = supabaseConfig();
   if (!config || !config.url.startsWith("https://")) failures.push("Valid Supabase public URL and publishable key are required.");
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!secret) failures.push("SUPABASE_SERVICE_ROLE_KEY is required on the server.");
+  const secret = supabaseServerKey();
+  if (!secret) failures.push("SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) is required on the server.");
   if ((process.env.RATE_LIMIT_SECRET?.trim().length ?? 0) < 32) failures.push("RATE_LIMIT_SECRET must contain at least 32 characters.");
   if (failures.length || !config || !secret) return failures;
   const options = { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, { ...init, cache: "no-store", signal: AbortSignal.timeout(10_000) }) } };

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 import { catalogSchema } from "../src/lib/data/catalog-schema";
-import { supabaseConfig } from "../src/lib/deployment";
+import { supabaseConfig, supabaseServerKey } from "../src/lib/deployment";
 
 async function main() {
 const [file, source, confirmation] = process.argv.slice(2);
@@ -10,7 +10,7 @@ const bytes = await readFile(file);
 if (bytes.length > 20_000_000) throw new Error("Catalog exceeds 20MB. Split the catalog architecture before increasing this limit.");
 const catalog = catalogSchema.parse(JSON.parse(bytes.toString("utf8")));
 if (catalog.city.slug !== "hyderabad") throw new Error("Only Hyderabad is supported.");
-const config = supabaseConfig(), secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const config = supabaseConfig(), secret = supabaseServerKey();
 if (!config || !secret) throw new Error("Configure the Supabase URL and keys through the server environment.");
 const database = createClient(config.url, secret, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(30_000) }) } });
 const result = await database.from("catalog_snapshots").insert({ city_slug: "hyderabad", payload: catalog, source_name: source.trim() }).select("id").single();

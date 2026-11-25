@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
+import { publicSupabaseEnvironment } from "./src/lib/supabase/environment";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  env: publicSupabaseEnvironment(),
   async headers() {
     return [{ source: "/:path*", headers: [
       { key: "X-Content-Type-Options", value: "nosniff" },

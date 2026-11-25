@@ -1,7 +1,7 @@
 import "server-only";
 import { createHmac } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import { isProductionDeployment, supabaseConfig } from "@/lib/deployment";
+import { isProductionDeployment, supabaseConfig, supabaseServerKey } from "@/lib/deployment";
 import { HttpError } from "./http";
 
 const local = new Map<string, { count: number; until: number }>();
@@ -14,7 +14,7 @@ export async function requestBudget(request: Request, scope: keyof typeof polici
   const production = isProductionDeployment();
   const secret = process.env.RATE_LIMIT_SECRET?.trim();
   const config = supabaseConfig();
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const serviceKey = supabaseServerKey();
   const key = createHmac("sha256", secret || "preview-only").update(`${scope}:${identity}`).digest("hex");
   if (production) {
     if (!config || !secret || secret.length < 32 || !serviceKey) throw new HttpError(503, "The service is temporarily unavailable.", "protection_unavailable");

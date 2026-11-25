@@ -1,3 +1,5 @@
+import { publicSupabaseEnvironment } from "./supabase/environment";
+
 export function isProductionDeployment(): boolean {
   const mode = process.env.PROPIT_MODE?.trim();
   if (mode && mode !== "preview" && mode !== "production") throw new Error("Invalid PROPIT_MODE.");
@@ -19,8 +21,7 @@ export function requestOrigin(request: Request): string | null {
 }
 
 export function supabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  const { NEXT_PUBLIC_SUPABASE_URL: url, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: key } = publicSupabaseEnvironment();
   if (!url || !key) return null;
   try {
     const parsed = new URL(url);
@@ -28,6 +29,11 @@ export function supabaseConfig() {
     if (parsed.username || parsed.password || parsed.search || parsed.hash) return null;
     return { url: parsed.origin, key };
   } catch { return null; }
+}
+
+/** Backend credentials are never included in Next's public environment mapping. */
+export function supabaseServerKey() {
+  return process.env.SUPABASE_SECRET_KEY?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 }
 
 /** Never use a request Host header to choose where authentication sends users. */
