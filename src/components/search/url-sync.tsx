@@ -32,6 +32,8 @@ function parse(sp: URLSearchParams): { filters: PropertyFilters; anchors: Anchor
     priceMax: num("maxPrice"),
     areaMin: num("minArea"),
     areaMax: num("maxArea"),
+    floorMin: num("minFloor"),
+    floorMax: num("maxFloor"),
     possession: list("possession").filter((p): p is PossessionStatus => POSSESSIONS.includes(p as PossessionStatus)),
     amenities: list("amenities"),
     localitySlugs: list("locality"),

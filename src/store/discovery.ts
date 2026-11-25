@@ -83,6 +83,8 @@ interface DiscoveryState {
   viewMode: ViewMode;
   anchorsOpen: boolean;
   filtersOpen: boolean;
+  radiusPinning: boolean;
+  setRadiusPinning: (value: boolean) => void;
   assistantOpen: boolean;
   assistantDraft: string | null;
   paletteOpen: boolean;
@@ -197,6 +199,8 @@ export const useDiscovery = create<DiscoveryState>()(
     viewMode: "split",
     anchorsOpen: false,
     filtersOpen: false,
+    radiusPinning: false,
+    setRadiusPinning: (radiusPinning) => set({ radiusPinning, drawMode: "none" }),
     assistantOpen: false,
     assistantDraft: null,
     paletteOpen: false,
@@ -209,7 +213,7 @@ export const useDiscovery = create<DiscoveryState>()(
       set((s) => ({
         filters: { ...DEFAULT_FILTERS, listingType: s.filters.listingType },
         radius: null,
-        polygon: null,
+        polygon: null, radiusPinning: false,
       })),
 
     toggleArrayFilter: (key, value) =>
@@ -251,7 +255,7 @@ export const useDiscovery = create<DiscoveryState>()(
 
     setRadius: (radius) => set({ radius }),
     setPolygon: (polygon) => set({ polygon }),
-    setDrawMode: (drawMode) => set({ drawMode }),
+    setDrawMode: (drawMode) => set({ drawMode, radiusPinning: false }),
 
     setBounds: (bounds, zoom) =>
       set((st) => ({
@@ -372,7 +376,7 @@ export function setDiscoveryOwner(owner: string | null): Promise<void> {
     if (owner === activeOwner) return;
     persistencePaused = true;
     try {
-      useDiscovery.setState({ ...EMPTY_ACCOUNT_STATE, ...(activeOwner !== null ? { filters: { ...DEFAULT_FILTERS }, anchors: [], radius: null, polygon: null, selectedPropertyId: null, hoveredPropertyId: null, selectedLocalitySlug: null, previewProperty: null, viewedProperty: null } : {}) });
+      useDiscovery.setState({ ...EMPTY_ACCOUNT_STATE, radiusPinning: false, ...(activeOwner !== null ? { filters: { ...DEFAULT_FILTERS }, anchors: [], radius: null, polygon: null, selectedPropertyId: null, hoveredPropertyId: null, selectedLocalitySlug: null, previewProperty: null, viewedProperty: null } : {}) });
       useDiscovery.persist.setOptions({ name: owner ? `propit.account.${owner}` : "propit.discovery" });
       await useDiscovery.persist.rehydrate();
       activeOwner = owner;
@@ -395,6 +399,8 @@ export function filtersToParams(
   if (filters.priceMax != null) p.set("maxPrice", String(filters.priceMax));
   if (filters.areaMin != null) p.set("minArea", String(filters.areaMin));
   if (filters.areaMax != null) p.set("maxArea", String(filters.areaMax));
+  if (filters.floorMin != null) p.set("minFloor", String(filters.floorMin));
+  if (filters.floorMax != null) p.set("maxFloor", String(filters.floorMax));
   if (filters.possession.length) p.set("possession", filters.possession.join(","));
   if (filters.amenities.length) p.set("amenities", filters.amenities.join(","));
   if (filters.localitySlugs.length) p.set("locality", filters.localitySlugs.join(","));

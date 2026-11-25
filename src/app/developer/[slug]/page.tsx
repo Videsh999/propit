@@ -1,0 +1,11 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { allDevelopers, allProjects, getLocality } from "@/lib/data/repository";
+import { prepareStore } from "@/lib/data/store";
+import { ProjectCard } from "@/components/cards/project-card";
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) { await prepareStore(); const { slug } = await params; return { title: allDevelopers().find(item => item.slug === slug)?.name ?? "Developer not found" }; }
+export default async function DeveloperPage({ params }: { params: Promise<{ slug: string }> }) {
+  await prepareStore(); const { slug } = await params; const developer = allDevelopers().find(item => item.slug === slug); if (!developer) notFound();
+  const projects = allProjects().filter(item => item.developerId === developer.id);
+  return <main className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8"><Link href="/developers" className="inline-flex min-h-11 items-center text-sm font-semibold text-accent">All developers</Link><header className="mt-4 rounded-3xl border border-line bg-raised p-6 sm:p-9"><span className="grid size-16 place-items-center rounded-2xl bg-accent-wash text-xl font-semibold text-accent">{developer.logoMark}</span><h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">{developer.name}</h1><p className="mt-4 max-w-[72ch] text-[16px] leading-relaxed text-muted">{developer.about}</p><dl className="mt-6 grid gap-5 border-t border-line pt-5 sm:grid-cols-3">{[["Established", developer.establishedYear], ["Projects delivered", developer.projectsDelivered], ["Projects on PropIT", projects.length]].map(([label, value]) => <div key={label}><dt className="text-sm text-muted">{label}</dt><dd className="mt-2 text-2xl font-semibold text-accent">{value}</dd></div>)}</dl></header><section className="mt-8"><h2 className="text-3xl font-semibold tracking-tight">Explore their communities.</h2><ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{projects.map(project => <li key={project.id}><ProjectCard project={project} developerName={developer.name} localityName={getLocality(project.localityId)?.name ?? "Hyderabad"} /></li>)}</ul></section></main>;
+}

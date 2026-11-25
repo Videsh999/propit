@@ -14,6 +14,11 @@ import { Img } from "@/components/ui/img";
 import { Tag } from "@/components/ui/badge";
 import { ProjectGallery } from "@/components/project/project-gallery";
 import { ProjectInsights } from "@/components/project/project-insights";
+import { ProjectSectionNav } from "@/components/project/project-section-nav";
+import { CommunityBuzz } from "@/components/project/community-buzz";
+import { ProjectBrochure } from "@/components/project/project-brochure";
+import { ProjectFloorPlans } from "@/components/project/project-floor-plans";
+import { publishedCommunityUpdates } from "@/lib/data/community";
 import { ProjectMap } from "@/components/project/project-map";
 import { ProjectAmenities } from "@/components/project/project-amenities";
 import { ProjectInventory } from "@/components/project/project-inventory";
@@ -24,9 +29,9 @@ import { formatArea, formatCount, formatPrice, projectStatusLabel, propertyTypeL
 import type { Project, ProjectSpecification } from "@/types";
 
 const SECTIONS = [
-  ["overview", "Overview"], ["amenities", "Amenities"], ["insights", "Price insights"],
-  ["inventory", "Available homes"], ["plans", "Plans & documents"], ["location", "Location"],
-  ["details", "Project details"], ["builder", "Builder"], ["reviews", "Community"], ["faqs", "FAQs"],
+  ["overview", "Overview"], ["buzz", "Community buzz"], ["inventory", "Buy & rent"], ["amenities", "Amenities"],
+  ["plans", "Floor plans"], ["specifications", "Specifications"], ["brochure", "Brochure"],
+  ["builder", "Developer"], ["location", "Location"], ["insights", "Price insights"], ["details", "Project facts"], ["reviews", "Reviews"], ["faqs", "FAQs"],
 ];
 
 const SPECIFICATIONS: [ProjectSpecification, string][] = [
@@ -63,6 +68,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   if (!project) notFound();
 
   const profile = project.profile ?? {};
+  const hotTopic = publishedCommunityUpdates(profile.communityUpdates)[0];
   const locality = getLocality(project.localityId);
   const developer = getDeveloper(project.developerId);
   const units = getProjectProperties(project.id);
@@ -88,11 +94,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   const otherProjects = projects.filter((candidate) =>
     candidate.developerId === project.developerId && !related.includes(candidate) && !similar.includes(candidate),
   ).slice(0, 4);
-  const plans = new Map<string, NonNullable<typeof profile.floorPlans>>();
-  for (const configuration of configurations) plans.set(configuration, []);
-  for (const plan of profile.floorPlans ?? []) {
-    plans.set(plan.configuration, [...(plans.get(plan.configuration) ?? []), plan]);
-  }
   const reviews = profile.reviews ?? [];
   const rating = reviews.length ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : null;
   const faqs = profile.faqs?.length ? profile.faqs : [
@@ -141,7 +142,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       </div>
 
       <div className="grid items-start gap-7 lg:grid-cols-2 lg:gap-9">
-        <section id="media" className="min-w-0 scroll-mt-16" aria-label="Project photographs">
+        <section id="media" className="min-w-0 scroll-mt-28 md:scroll-mt-20" aria-label="Project photographs">
           <ProjectGallery key={project.id} name={project.name} images={[project.heroImage, ...project.gallery]} videoUrl={profile.videoUrl} preview={!isProductionDeployment()} />
         </section>
         <header className="min-w-0 lg:py-1">
@@ -158,15 +159,15 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[.1em] text-muted">Listed project range</p><p className="mt-2 text-[clamp(24px,2.7vw,36px)] font-semibold leading-tight tracking-tight">{formatPrice(project.priceMin)} <span className="font-normal text-muted">–</span> {formatPrice(project.priceMax)}</p></div><Link href="#insights" className="flex min-h-11 items-center gap-2 text-[14px] font-semibold text-accent"><ChartNoAxesCombined size={16} />Price insights</Link></div>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-accent/15 pt-3 text-[14px] text-muted"><span>{saleCount} sale listings</span><span>{rentCount} rental listings</span><span className="flex items-center gap-1.5"><Calendar size={14} />Possession · {project.possessionDate || MISSING}</span></div>
           </div>
+          {hotTopic && <Link href="#buzz" className="mt-4 block rounded-2xl border border-accent-line bg-accent-wash p-4"><p className="text-xs font-semibold uppercase tracking-wider text-accent">Community spotlight</p><p className="mt-2 text-[16px] font-semibold">{hotTopic.title}</p><p className="mt-2 text-xs text-muted">{hotTopic.sourceName}</p></Link>}
           <div className="mt-4 grid grid-cols-3 gap-2">
             {[{ label: "Available homes", value: `${units.length} listings`, href: "#inventory", icon: House }, { label: "Plans & documents", value: "Explore layouts", href: "#plans", icon: LayoutGrid }, { label: "Location", value: "Map & commute", href: "#location", icon: MapPin }].map(({ label, value, href, icon: Icon }) => <Link key={href} href={href} className="flex min-h-24 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-line bg-raised p-2 text-center transition-colors hover:border-accent hover:bg-accent-wash"><Icon size={20} strokeWidth={1.5} className="mb-1 text-accent" /><span className="text-xs font-semibold sm:text-[14px]">{label}</span><span className="text-xs text-muted">{value}</span></Link>)}
           </div>
         </header>
       </div>
 
-      <nav aria-label="Project sections" className="sticky top-[72px] z-20 mb-7 mt-7 flex gap-6 overflow-x-auto whitespace-nowrap border-y border-line bg-paper/95 px-1 py-4 text-[14px] font-semibold text-muted backdrop-blur-xl">
-        {SECTIONS.map(([id, label]) => <Link href={`#${id}`} key={id} className="rounded-sm transition-colors hover:text-accent">{label}</Link>)}
-      </nav>
+      <ProjectSectionNav name={project.name} sections={SECTIONS} />
+      <div className="mb-5"><Section id="buzz" title="Community buzz"><CommunityBuzz updates={profile.communityUpdates} saleCount={saleCount} rentCount={rentCount} /></Section></div>
 
       <div className="grid items-start gap-5 lg:grid-cols-2">
         <Section id="overview" title="About the project">
@@ -180,7 +181,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
           <p className="text-[16px] leading-relaxed text-muted">Spaces for your everyday routines and your downtime.</p>
           <ProjectAmenities amenities={project.amenities} compact />
           {profile.clubhouseSqft != null && <p className="mt-4 text-[14px] text-muted">Clubhouse · <strong className="text-ink">{formatArea(profile.clubhouseSqft)}</strong></p>}
-          <div className="mt-5 flex flex-wrap gap-2"><Document label="Brochure" url={profile.brochureUrl} /><Link href="#builder" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-paper px-4 text-[14px] font-semibold text-accent"><Building2 size={16} />Meet the builder</Link></div>
+          <div className="mt-5 flex flex-wrap gap-2"><Link href="#brochure" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-paper px-4 text-[14px] font-semibold text-accent"><FileText size={16} />Read brochure</Link><Link href="#builder" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-paper px-4 text-[14px] font-semibold text-accent"><Building2 size={16} />Meet the builder</Link></div>
         </Section>
       </div>
 
@@ -192,17 +193,20 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
         <Section id="inventory" title="Available properties">
           <p className="mb-5 text-[16px] text-muted">Find your fit within this community. Explore sale and rental homes by configuration.</p>
-          <ProjectInventory key={project.id} listings={listings} />
+          <ProjectInventory key={project.id} listings={listings} configurations={configurations} />
         </Section>
 
-        <Section id="plans" title="Plans & documents">
-          <div className="grid gap-3 sm:grid-cols-3"><Document label="Brochure" url={profile.brochureUrl} /><Document label="Cost sheet" url={profile.costSheetUrl} /><Document label="Master plan" url={profile.masterPlanUrl} /></div>
+        <Section id="plans" title="Floor plans & units">
+          <ProjectFloorPlans key={project.id} name={project.name} configurations={configurations} plans={profile.floorPlans} />
+          <div className="mt-5 grid gap-3 sm:grid-cols-2"><Document label="Cost sheet" url={profile.costSheetUrl} /><Document label="Master plan" url={profile.masterPlanUrl} /></div>
           {profile.masterPlanUrl && <PlanImage url={profile.masterPlanUrl} alt={`${project.name} master plan`} />}
-          <h3 className="mb-2 mt-6 text-lg font-semibold">Floor plans by configuration</h3>
-          {plans.size ? [...plans].map(([configuration, entries]) => <details key={configuration} className="border-b border-line py-3 text-[14px]">
-            <summary className="min-h-8 cursor-pointer font-semibold">{configuration}<span className="ml-2 font-normal text-muted">{entries.length ? `${entries.length} plans` : MISSING}</span></summary>
-            {entries.map(plan => <div key={plan.url} className="my-3"><Document label={[configuration, plan.unitSizeSqft && formatArea(plan.unitSizeSqft), plan.facing].filter(Boolean).join(" · ")} url={plan.url} /><PlanImage url={plan.url} alt={`${project.name} ${configuration} floor plan`} /></div>)}
-          </details>) : <p className="text-[14px] text-muted">Floor plans not supplied.</p>}
+        </Section>
+        <Section id="specifications" title="Specifications">
+          <p className="mb-4 text-[16px] text-muted">Construction, finishes and the services that make this project work.</p>
+          <Facts rows={SPECIFICATIONS.map(([key, label]) => [label, profile.specifications?.[key]])} />
+        </Section>
+        <Section id="brochure" title="Brochure · read online">
+          <ProjectBrochure name={project.name} builder={developer?.name ?? "Builder not supplied"} description={project.description} image={project.heroImage} configurations={configurations} url={profile.brochureUrl} pages={profile.brochurePages} />
         </Section>
 
         <Section id="location" title={locality ? `Life around ${locality.name}` : "Location & connectivity"}>
@@ -213,13 +217,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
         <Section id="details" title="The finer details">
           <details className="rounded-xl border border-line px-4 py-3"><summary className="min-h-8 cursor-pointer text-[16px] font-semibold">Project details & RERA</summary><div className="mt-3"><Facts rows={facts} /></div></details>
-          <details id="specifications" className="mt-3 scroll-mt-16 rounded-xl border border-line px-4 py-3"><summary className="min-h-8 cursor-pointer text-[16px] font-semibold">Construction & specifications</summary><div className="mt-3"><Facts rows={SPECIFICATIONS.map(([key, label]) => [label, profile.specifications?.[key]])} /></div></details>
           <div className="mt-5 grid gap-5 sm:grid-cols-2"><div><h3 className="mb-2 text-[14px] font-semibold">Credentials & certifications</h3>{profile.credentials?.length ? <ul className="space-y-2 text-[14px]">{profile.credentials.map(item => <li key={item.name}>{item.url ? <a href={item.url} className="text-accent underline">{item.name}</a> : item.name}{item.reference && ` · ${item.reference}`}</li>)}</ul> : <p className="text-[14px] text-muted">Credentials have not been supplied.</p>}</div><div><h3 className="mb-2 text-[14px] font-semibold">Consultants & partners</h3><TextList items={profile.partners?.map(({ name, role }) => `${role} · ${name}`)} /></div></div>
         </Section>
 
         <div className="grid items-start gap-5 lg:grid-cols-2">
           <Section id="builder" title="The people behind the project">
-            {developer ? <><div className="mb-4 flex items-center gap-3"><span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-accent-wash text-[14px] font-semibold text-accent">{developer.logoMark}</span><div><h3 className="text-lg font-semibold">{developer.name}</h3><p className="mt-1 text-[14px] text-muted">Since {developer.establishedYear} · {formatCount(developer.projectsDelivered)} projects delivered</p></div></div><p className="text-[16px] leading-relaxed text-muted">{developer.about}</p></> : <p className="text-[14px] text-muted">{MISSING}</p>}
+            {developer ? <><div className="mb-4 flex items-center gap-3"><span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-accent-wash text-[14px] font-semibold text-accent">{developer.logoMark}</span><div><h3 className="text-lg font-semibold">{developer.name}</h3><p className="mt-1 text-[14px] text-muted">Since {developer.establishedYear} · {formatCount(developer.projectsDelivered)} projects delivered</p></div></div><p className="text-[16px] leading-relaxed text-muted">{developer.about}</p><Link href={`/developer/${developer.slug}`} className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-accent">View developer profile</Link></> : <p className="text-[14px] text-muted">{MISSING}</p>}
           </Section>
           <Section id="reviews" title="Community & reviews">
             {rating == null ? <div className="rounded-2xl border border-dashed border-line bg-paper p-6"><MessageCircle size={26} strokeWidth={1.5} className="text-accent" /><p className="mt-3 text-[16px] font-semibold">A fresh perspective starts here.</p><p className="mt-2 text-[14px] leading-relaxed text-muted">No ratings or reviews have been supplied for this project yet.</p></div> : <><p className="mb-3 text-2xl font-semibold">{rating.toFixed(1)} <span className="text-[14px] font-normal text-muted">/ 5 · {formatCount(reviews.length)} reviews</span></p><ul className="divide-y divide-line">{reviews.map(review => <li key={review.id} className="py-3 text-[14px]"><strong>{review.author}</strong> · {review.rating} / 5<p className="mt-2 leading-relaxed text-muted">{review.text}</p></li>)}</ul></>}
@@ -242,7 +245,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 }
 
 function Section({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
-  return <section id={id} className="min-w-0 scroll-mt-16 rounded-[24px] border border-line bg-raised p-5 sm:p-7">
+  return <section id={id} className="min-w-0 scroll-mt-28 md:scroll-mt-20 rounded-[24px] border border-line bg-raised p-5 sm:p-7">
     <h2 className="mb-5 text-[clamp(26px,3vw,34px)] font-semibold leading-tight tracking-[-.035em]">{title}</h2>
     {children}
   </section>;

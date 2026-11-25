@@ -16,6 +16,7 @@ const LINKS = [
   { href: "/search?type=rent", label: "Rent" },
   { href: "/projects", label: "Projects" },
   { href: "/localities", label: "Localities" },
+  { href: "/developers", label: "Developers" },
   { href: "/insights", label: "Insights" },
 ];
 
@@ -38,7 +39,7 @@ export function Navbar() {
       <nav className="mx-auto flex h-full max-w-[1440px] items-center gap-3 px-4 sm:px-5 lg:gap-7 lg:px-8">
         <Logo size="md" />
 
-        <ul className="hidden flex-1 items-center gap-1 md:flex">
+        <ul className="hidden flex-1 items-center gap-1 lg:flex">
           {LINKS.map((l) => {
             const listingType = l.href.includes("type=rent") ? "rent" : "buy";
             const active = pathname === l.href.split("?")[0] && pathname !== "/"
@@ -62,7 +63,7 @@ export function Navbar() {
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => setPaletteOpen(true)}
-            className="hidden h-9 items-center gap-2 rounded-full border border-line bg-raised pl-3 pr-2 text-[13px] text-faint transition-colors hover:border-line-strong hover:text-muted lg:flex"
+            className="hidden h-9 items-center gap-2 rounded-full border border-line bg-raised pl-3 pr-2 text-[13px] text-faint transition-colors hover:border-line-strong hover:text-muted xl:flex"
             aria-label="Search PropIT"
           >
             <Search size={14} strokeWidth={1.75} />
@@ -83,7 +84,7 @@ export function Navbar() {
             {compareCount > 0 && <span>{compareCount}</span>}
           </Link>
 
-          {!customer.loading && !customer.user && <Link href={authPageHref("login", accountNext)} className="hidden h-9 items-center rounded-full bg-accent px-4 text-[13px] font-semibold text-accent-ink transition-colors hover:bg-accent-hover lg:inline-flex">Log in</Link>}
+          {!customer.loading && !customer.user && <Link href={authPageHref("login", accountNext)} className="hidden h-9 items-center rounded-full bg-accent px-4 text-[13px] font-semibold text-accent-ink transition-colors hover:bg-accent-hover xl:inline-flex">Log in</Link>}
 
           <Link
             href="/profile"
@@ -94,7 +95,7 @@ export function Navbar() {
           </Link>
 
           <button
-            className="grid h-9 w-9 place-items-center rounded-[var(--r-sm)] text-muted md:hidden"
+            className="grid h-9 w-9 place-items-center rounded-[var(--r-sm)] text-muted lg:hidden"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
@@ -105,7 +106,7 @@ export function Navbar() {
       </nav>
 
       {mobileOpen && (
-        <div className="border-t border-line bg-raised px-5 py-3 shadow-e2 md:hidden">
+        <div className="border-t border-line bg-raised px-5 py-3 shadow-e2 lg:hidden">
           <ul className="grid gap-1">
             {LINKS.map((l) => (
               <li key={l.label}>

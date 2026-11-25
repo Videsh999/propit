@@ -99,7 +99,15 @@ export type ProjectSpecification =
   | "airConditioning" | "telecom" | "internet" | "lifts" | "waterTreatment"
   | "security" | "fireSafety";
 
+export interface CommunityUpdate {
+  id: string; category: "auction" | "sale" | "news" | "milestone"; title: string; summary: string;
+  publishedAt: string; sourceName: string; sourceUrl: string; verified?: boolean;
+  amount?: number; configuration?: string; areaSqft?: number;
+}
+
 export interface ProjectProfile {
+  communityUpdates?: CommunityUpdate[];
+  brochurePages?: string[];
   type?: "Apartment" | "Villa" | "Plot" | "Mixed-use";
   category?: "Residential" | "Commercial" | "Mixed";
   launchDate?: string;
@@ -234,6 +242,8 @@ export interface PropertyFilters {
   priceMax: number | null;
   areaMin: number | null;
   areaMax: number | null;
+  floorMin: number | null;
+  floorMax: number | null;
   possession: PossessionStatus[];
   amenities: string[];
   localitySlugs: string[];

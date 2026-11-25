@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Search, MessageCircle, MapPin, Building2, Landmark, CornerDownLeft, Loader2 } from "lucide-react";
+import { Search, MessageCircle, MapPin, Building2, Landmark, CornerDownLeft, Loader2, X } from "lucide-react";
 import { useSuggest, type Suggestion } from "@/lib/hooks/use-suggest";
 import { filtersToParams, useDiscovery } from "@/store/discovery";
 import { cn } from "@/lib/utils";
-import type { PropertyFilters } from "@/types";
+import type { Locality, PropertyFilters } from "@/types";
 
 const GROUP_ICON = {
   Localities: MapPin,
@@ -24,6 +24,9 @@ export function SearchInput({
   onDone,
   className,
   stayOnMap = false,
+  locationsOnly = false,
+  onPickLocation,
+  localities = [],
 }: {
   autoFocus?: boolean;
   placeholder?: string;
@@ -31,8 +34,13 @@ export function SearchInput({
   onDone?: () => void;
   className?: string;
   stayOnMap?: boolean;
+  locationsOnly?: boolean;
+  onPickLocation?: (suggestion: Suggestion) => void;
+  localities?: Pick<Locality, "slug" | "name" | "center">[];
 }) {
   const router = useRouter();
+  const listId = useId();
+  const selectedLocalities = useDiscovery(state => state.filters.localitySlugs);
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [cursor, setCursor] = useState(0);
@@ -60,6 +68,7 @@ export function SearchInput({
 
   function startMapSearch() {
     setUseBounds(false);
+    useDiscovery.getState().setRadiusPinning(false);
     if (stayOnMap) {
       const store = useDiscovery.getState();
       store.setPolygon(null);
@@ -73,8 +82,8 @@ export function SearchInput({
   // The assistant row is always last, so a question is never a dead end.
   const rows = useMemo(() => {
     const list: (Suggestion | { id: "__ask"; group: "Ask PropIT"; label: string; sublabel: string })[] =
-      [...(data?.suggestions ?? [])];
-    if (value.trim().length > 2) {
+      [...(data?.suggestions ?? [])].filter(suggestion => !(locationsOnly || stayOnMap) || ["Localities", "Nearby"].includes(suggestion.group));
+    if (!locationsOnly && value.trim().length > 2) {
       list.push({
         id: "__ask",
         group: "Ask PropIT",
@@ -83,7 +92,7 @@ export function SearchInput({
       });
     }
     return list;
-  }, [data?.suggestions, value, parsed]);
+  }, [data?.suggestions, value, parsed, locationsOnly, stayOnMap]);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -154,16 +163,18 @@ export function SearchInput({
       return;
     }
     const s = row as Suggestion;
+    if (onPickLocation && s.location) { onPickLocation(s); setOpen(false); setValue(""); return; }
     setOpen(false);
     setValue("");
     if (s.group === "Localities" && s.slug) {
       startMapSearch();
-      setFilters({ localitySlugs: [s.slug] });
+      const slugs = [...new Set([...useDiscovery.getState().filters.localitySlugs, s.slug])].slice(0, 40);
+      selectLocality(null);
+      setFilters({ localitySlugs: slugs });
       setRadius(null);
-      if (!stayOnMap) {
-        selectLocality(s.slug);
-        if (s.location) flyTo(s.location, 13.2);
-      }
+      const centers = localities.filter(locality => slugs.includes(locality.slug)).map(locality => locality.center);
+      if (centers.length > 1) useDiscovery.getState().fitBounds({ west: Math.min(...centers.map(point => point.lng)) - .01, east: Math.max(...centers.map(point => point.lng)) + .01, south: Math.min(...centers.map(point => point.lat)) - .01, north: Math.max(...centers.map(point => point.lat)) + .01 });
+      else if (s.location) flyTo(s.location, 13.2);
       openResults();
     } else if (s.href) {
       router.push(s.href);
@@ -211,17 +222,19 @@ export function SearchInput({
             } else if (e.key === "Enter") {
               e.preventDefault();
               if (rows[cursor]) pick(rows[cursor]);
-              else if (value.trim()) void runNaturalSearch(value.trim());
+              else if (value.trim() && !locationsOnly) void runNaturalSearch(value.trim());
             } else if (e.key === "Escape") {
               setOpen(false);
               inputRef.current?.blur();
             }
           }}
           placeholder={placeholder}
-          aria-label="Search properties, projects and locations"
+          aria-label={locationsOnly ? "Search radius origin" : "Search properties, projects and locations"}
           role="combobox"
           aria-expanded={open}
-          aria-controls="propit-suggestions"
+          aria-controls={listId}
+          aria-activedescendant={open && rows[cursor] ? `${listId}-${cursor}` : undefined}
+          aria-autocomplete="list"
           className={cn(
             "min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-faint",
             size === "lg" ? "text-[15px]" : "text-[14px]",
@@ -234,10 +247,14 @@ export function SearchInput({
         )}
       </div>
 
+      {!onPickLocation && selectedLocalities.length > 0 && <div className="mt-2 flex max-h-24 flex-wrap gap-1.5 overflow-y-auto" aria-label="Selected locations">{selectedLocalities.map(slug => <button key={slug} type="button" aria-label={`Remove ${localities.find(item => item.slug === slug)?.name ?? slug}`} onClick={() => { selectLocality(null); setUseBounds(false); setFilters({ localitySlugs: selectedLocalities.filter(item => item !== slug) }); }} className="inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-full border border-line bg-accent-wash px-2.5 text-xs font-medium text-accent"><span className="truncate">{localities.find(item => item.slug === slug)?.name ?? slug.split("-").map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(" ")}</span><X size={12} /></button>)}</div>}
+      {locationsOnly && open && value.length >= 2 && !isFetching && rows.length === 0 && <p role="status" className="mt-2 text-xs text-muted">No matching places. Try a locality or drop a pin on the map.</p>}
+
       <AnimatePresence>
         {open && rows.length > 0 && (
           <motion.div
-            id="propit-suggestions"
+            id={listId}
+            aria-multiselectable={!locationsOnly}
             role="listbox"
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -263,7 +280,7 @@ export function SearchInput({
                     <div className="eyebrow px-4 pb-1 pt-3">{row.group}</div>
                   )}
                   <button
-                    role="option"
+                    role="option" id={`${listId}-${i}`}
                     aria-selected={i === cursor}
                     onMouseEnter={() => setCursor(i)}
                     onClick={() => pick(row)}

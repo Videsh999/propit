@@ -17,6 +17,7 @@ import { CompareToggle } from "@/components/compare/compare-toggle";
 import { Img } from "@/components/ui/img";
 import { activeFilterCount } from "@/lib/data/filters";
 import { formatArea, formatCount, formatPrice, formatRent, possessionLabel, propertyTypeLabel } from "@/lib/format";
+import { BudgetMeter } from "@/components/filters/budget-meter";
 import { AMENITIES } from "@/lib/data/developers";
 import { ORR_BBOX } from "@/lib/map/viewport";
 import type { MapProject } from "@/components/map/propit-map";
@@ -34,10 +35,6 @@ const PropitMap = dynamic(() => import("@/components/map/propit-map").then((modu
 
 type LocalityLite = Pick<Locality, "slug" | "name" | "center" | "boundary" | "avgPriceSqft">;
 
-const BUDGETS = {
-  buy: [[1e7, "Under ₹1 Cr"], [2e7, "Under ₹2 Cr"], [3e7, "Under ₹3 Cr"], [5e7, "Under ₹5 Cr"]],
-  rent: [[25000, "Under ₹25k / mo"], [50000, "Under ₹50k / mo"], [100000, "Under ₹1 lakh / mo"]],
-} as const;
 const POPULAR = ["kokapet", "gachibowli", "financial-district", "tellapur"];
 const EMPTY_POINTS: PropertiesResponse["points"] = [];
 const PROPERTY_TYPES: PropertyType[] = ["apartment", "villa", "independent_house", "penthouse", "plot", "farmhouse", "commercial"];
@@ -132,16 +129,10 @@ export function Hero({ localities, mapProjects, initialResults, prime, projects 
                   {type === "buy" ? "Buy" : "Rent"}
                 </button>
               ))}
-              <Link href="/projects">Projects</Link>
             </div>
             <div className={styles.searchRow}>
-              <SearchInput className={styles.searchInput} size="md" placeholder="Search a locality or landmark" stayOnMap />
-              <div className={styles.selectWrap}>
-                <select aria-label="Budget" value={filters.priceMin !== null ? "custom" : filters.priceMax ?? ""} onChange={(event) => setFilters({ priceMin: null, priceMax: Number(event.target.value) || null })}>
-                  <BudgetOptions filters={filters} />
-                </select>
-                <ChevronDown size={14} aria-hidden="true" />
-              </div>
+              <SearchInput className={styles.searchInput} size="md" placeholder="Add localities or a landmark" localities={localities} stayOnMap />
+              <BudgetMeter />
               <div className={styles.selectWrap}>
                 <select aria-label="Bedrooms" value={filters.bedrooms.length > 1 ? "multiple" : filters.bedrooms[0] ?? ""} onChange={(event) => setFilters({ bedrooms: event.target.value ? [Number(event.target.value)] : [] })}>
                   <BedroomOptions filters={filters} />
@@ -240,7 +231,7 @@ export function Hero({ localities, mapProjects, initialResults, prime, projects 
               <option value="">All localities</option>{localities.map(({ slug, name }) => <option key={slug} value={slug}>{name}</option>)}
               {filters.localitySlugs.length > 1 && <option value="multiple" disabled>Multiple localities</option>}
             </select><ChevronDown size={13} aria-hidden="true" /></div></label>
-            <label><span>Budget</span><div className={styles.optionSelect}><select aria-label="Property budget" value={filters.priceMin !== null ? "custom" : filters.priceMax ?? ""} onChange={(event) => setFilters({ priceMin: null, priceMax: Number(event.target.value) || null })}><BudgetOptions filters={filters} /></select><ChevronDown size={13} aria-hidden="true" /></div></label>
+            <div><span className="mb-1 block text-xs text-muted">Budget</span><BudgetMeter /></div>
             <label><span>Bedrooms</span><div className={styles.optionSelect}><select aria-label="Property bedrooms" value={filters.bedrooms.length > 1 ? "multiple" : filters.bedrooms[0] ?? ""} onChange={(event) => setFilters({ bedrooms: event.target.value ? [Number(event.target.value)] : [] })}><BedroomOptions filters={filters} /></select><ChevronDown size={13} aria-hidden="true" /></div></label>
             <label><span>Property type</span><div className={styles.optionSelect}><select aria-label="Property type" value={filters.propertyTypes.length > 1 ? "multiple" : filters.propertyTypes[0] ?? ""} onChange={(event) => setFilters({ propertyTypes: event.target.value ? [event.target.value as PropertyType] : [] })}>
               <option value="">All types</option>{PROPERTY_TYPES.map((type) => <option key={type} value={type}>{propertyTypeLabel(type)}</option>)}{filters.propertyTypes.length > 1 && <option value="multiple" disabled>Multiple types</option>}
@@ -301,17 +292,6 @@ function HomeCard({ property }: { property: ScoredProperty }) {
       <CompareToggle id={property.id} compact className="absolute right-2 top-2" />
     </article>
   );
-}
-
-function BudgetOptions({ filters }: { filters: PropertyFilters }) {
-  return <>
-    <option value="">Budget</option>
-    {BUDGETS[filters.listingType].map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-    {filters.priceMin !== null && <option value="custom" disabled>Custom budget</option>}
-    {filters.priceMax !== null && !BUDGETS[filters.listingType].some(([value]) => value === filters.priceMax) && (
-      <option value={filters.priceMax}>{filters.listingType === "buy" ? `Under ${formatPrice(filters.priceMax)}` : `Under ${formatRent(filters.priceMax)}`}</option>
-    )}
-  </>;
 }
 
 function BedroomOptions({ filters }: { filters: PropertyFilters }) {

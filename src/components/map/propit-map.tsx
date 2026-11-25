@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MapPin, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Map, {
   Layer,
@@ -174,6 +175,7 @@ export function PropitMap({
   const {
     anchors,
     radius,
+    radiusPinning,
     layers,
     selectedPropertyId,
     hoveredPropertyId,
@@ -189,7 +191,7 @@ export function PropitMap({
     polygon,
     setPolygon,
   } = useDiscovery(useShallow((s) => ({
-    anchors: s.anchors, radius: s.radius, layers: s.layers,
+    anchors: s.anchors, radius: s.radius, radiusPinning: s.radiusPinning, layers: s.layers,
     selectedPropertyId: s.selectedPropertyId, hoveredPropertyId: s.hoveredPropertyId, selectedLocalitySlug: s.selectedLocalitySlug,
     command: s.command, consumeCommand: s.consumeCommand, select: s.select, hover: s.hover, selectLocality: s.selectLocality,
     updateAnchor: s.updateAnchor, drawMode: s.drawMode, setDrawMode: s.setDrawMode, polygon: s.polygon, setPolygon: s.setPolygon,
@@ -639,8 +641,8 @@ export function PropitMap({
 
   const radiusGeoJson = useMemo(() => {
     const rings: { center: { lat: number; lng: number }; km: number }[] = [];
-    if (radius) rings.push({ center: radius.center, km: radius.km });
-    for (const a of anchors) rings.push({ center: a.location, km: a.maxKm });
+    if (followDiscoveryCamera && radius) rings.push({ center: radius.center, km: radius.km });
+    for (const a of followDiscoveryCamera ? anchors : []) rings.push({ center: a.location, km: a.maxKm });
     return {
       type: "FeatureCollection" as const,
       features: rings.map((r, i) => ({
@@ -649,7 +651,7 @@ export function PropitMap({
         geometry: { type: "Polygon" as const, coordinates: [circleRing(r.center, r.km)] },
       })),
     };
-  }, [radius, anchors]);
+  }, [radius, anchors, followDiscoveryCamera]);
 
   /**
    * The shape being dragged out, for circle and rectangle.
@@ -823,6 +825,12 @@ export function PropitMap({
 
   const handleClick = useCallback(
     (e: MapLayerMouseEvent) => {
+      if (followDiscoveryCamera && radiusPinning) {
+        const store = useDiscovery.getState();
+        store.setUseBounds(false); store.setPolygon(null); store.select(null); store.selectLocality(null); store.setFilters({ localitySlugs: [] });
+        store.setRadius({ center: { lat: e.lngLat.lat, lng: e.lngLat.lng }, km: radius?.km ?? 2, label: "Dropped pin" }); store.setRadiusPinning(false);
+        return;
+      }
       if (drawMode === "polygon") {
         const pt: [number, number] = [e.lngLat.lng, e.lngLat.lat];
         // Clicking the first vertex again closes the shape.
@@ -857,7 +865,7 @@ export function PropitMap({
         selectLocality(f.properties?.slug as string);
       }
     },
-    [select, selectLocality, drawMode, draft, finishDraw],
+    [select, selectLocality, drawMode, draft, finishDraw, radiusPinning, radius, followDiscoveryCamera],
   );
 
   const handleMove = useCallback(() => {
@@ -873,6 +881,13 @@ export function PropitMap({
       map.getZoom(),
     );
   }, [onBoundsChange, placeAreas, localityCounts, localityScope]);
+
+  useEffect(() => {
+    if (!radiusPinning || !followDiscoveryCamera) return;
+    const cancel = (event: KeyboardEvent) => { if (event.key === "Escape") useDiscovery.getState().setRadiusPinning(false); };
+    window.addEventListener("keydown", cancel); return () => window.removeEventListener("keydown", cancel);
+  }, [radiusPinning, followDiscoveryCamera]);
+  useEffect(() => () => { if (followDiscoveryCamera) useDiscovery.getState().setRadiusPinning(false); }, [followDiscoveryCamera]);
 
   const [cursor, setCursor] = useState("grab");
 
@@ -946,7 +961,7 @@ export function PropitMap({
           ...(layers.projects ? ["project-dot"] : []),
           ...(layers.localities ? ["locality-fill"] : []),
         ]}
-        cursor={cursor}
+        cursor={radiusPinning && followDiscoveryCamera ? "crosshair" : cursor}
         attributionControl={{ compact: true }}
         maxZoom={MAX_ZOOM}
         minZoom={MIN_ZOOM}
@@ -1252,7 +1267,7 @@ export function PropitMap({
         {/* Named areas with live counts. Only ~40 ever exist, so these are DOM
             markers: better type, a hover reveal, and no reliance on map fonts. */}
         {placedAreas.map((l) => (
-          <Marker key={l.slug} longitude={l.lng} latitude={l.lat} anchor="bottom">
+          <Marker key={l.slug} longitude={l.lng} latitude={l.lat} anchor="bottom" style={{ pointerEvents: radiusPinning && followDiscoveryCamera ? "none" : "auto" }}>
             <LocalityMarker
               name={l.name}
               count={l.count}
@@ -1268,6 +1283,10 @@ export function PropitMap({
             />
           </Marker>
         ))}
+
+        {followDiscoveryCamera && radius && <Marker longitude={radius.center.lng} latitude={radius.center.lat} anchor="bottom" draggable onDragEnd={event => useDiscovery.getState().setRadius({ ...radius, center: { lat: event.lngLat.lat, lng: event.lngLat.lng }, label: "Dropped pin" })}>
+          <div role="img" aria-label={`Radius centre: ${radius.label}`} className="flex flex-col items-center"><span className="mb-1 max-w-52 rounded-full border border-line bg-raised px-3 py-1 text-xs font-semibold text-accent shadow-e1">{radius.label} · {radius.km < 1 ? `${radius.km * 1000} m` : `${radius.km} km`}</span><span className="grid size-10 place-items-center rounded-full border-2 border-raised bg-accent text-accent-ink shadow-e2"><MapPin size={21} /></span></div>
+        </Marker>}
 
         {/* Anchors — few, draggable, and worth real DOM */}
         {anchors.map((a) => (
@@ -1308,6 +1327,7 @@ export function PropitMap({
         )}
       </Map>
 
+      {radiusPinning && followDiscoveryCamera && <div role="status" className="absolute bottom-24 left-1/2 z-20 flex max-w-[90%] -translate-x-1/2 items-center gap-3 rounded-2xl border border-line bg-raised px-4 py-3 text-sm font-semibold shadow-e2">Click the map to place your radius pin<button type="button" aria-label="Cancel radius pin" onClick={() => useDiscovery.getState().setRadiusPinning(false)} className="grid size-9 shrink-0 place-items-center rounded-full border border-line"><X size={16} /></button></div>}
       {drawMode !== "none" && (
         <div className="pointer-events-none absolute bottom-16 left-1/2 z-20 max-w-[90%] -translate-x-1/2 rounded-full border border-line bg-[color-mix(in_srgb,var(--paper-raised)_92%,transparent)] px-3.5 py-2 text-center text-[12px] text-muted shadow-[var(--e1)] backdrop-blur">
           {drawMode === "circle" &&

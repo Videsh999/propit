@@ -8,6 +8,8 @@ export const DEFAULT_FILTERS: PropertyFilters = {
   priceMax: null,
   areaMin: null,
   areaMax: null,
+  floorMin: null,
+  floorMax: null,
   possession: [],
   amenities: [],
   localitySlugs: [],
@@ -20,6 +22,7 @@ export function activeFilterCount(f: PropertyFilters): number {
   if (f.bedrooms.length) n++;
   if (f.priceMin != null || f.priceMax != null) n++;
   if (f.areaMin != null || f.areaMax != null) n++;
+  if (f.floorMin != null || f.floorMax != null) n++;
   if (f.possession.length) n++;
   if (f.amenities.length) n++;
   if (f.localitySlugs.length) n++;

@@ -253,6 +253,7 @@ const pages = [
   ["/", "Find where"],
   ["/search", "PropIT"],
   ["/projects", "Projects"],
+  ["/developers", "Hyderabad’s developers"],
   ["/project/verdant-sanctuary", "Amenities &amp; clubhouse"],
   ["/map-check", "PropIT"],
   ["/localities", "Kokapet"],
@@ -271,6 +272,16 @@ for (const [path, needle] of pages) {
   const html = await r.text();
   expect(r.status === 200 && html.includes(needle), `${path} renders`);
 }
+const projectHtml = await (await fetch(BASE + "/project/verdant-sanctuary")).text();
+for (const section of ["Community buzz", "Floor plans", "Specifications", "Brochure", "Developer"]) expect(projectHtml.includes(section), `project section: ${section}`);
+const developerHref = projectHtml.match(/href="(\/developer\/[^"#]+)"/);
+expect(Boolean(developerHref) && (await fetch(BASE + developerHref[1])).status === 200, "project links to its developer profile");
+expect((await fetch(BASE + "/developer/nope")).status === 404, "unknown developer 404s");
+const floors = await get("/api/properties?minFloor=4&maxFloor=10&limit=100");
+expect(floors.status === 200 && floors.json.total > 0 && floors.json.items.every(home => home.floor >= 4 && home.floor <= 10), "floor ranges reach the property API");
+expect((await get("/api/properties?minFloor=20&maxFloor=1")).status === 400, "reversed floor bounds are rejected");
+const multi = await get("/api/properties?locality=kokapet,gachibowli&limit=100");
+expect(multi.status === 200 && multi.json.items.every(home => ["loc_kokapet", "loc_gachibowli"].includes(home.localityId)), "multiple locality search returns their union");
 const first = (await get("/api/properties?type=buy&limit=1")).json.items[0];
 const detail = await (await fetch(`${BASE}/property/${first.slug}`)).text();
 expect(detail.includes("Estimated EMI") && detail.includes("nearby"), "property detail renders fully server-side");

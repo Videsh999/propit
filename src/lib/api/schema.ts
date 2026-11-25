@@ -52,6 +52,8 @@ export const filtersSchema = z.object({
   priceMax: z.number().nonnegative().nullable().default(null),
   areaMin: z.number().nonnegative().nullable().default(null),
   areaMax: z.number().nonnegative().nullable().default(null),
+  floorMin: z.number().int().min(-10).max(200).nullable().default(null),
+  floorMax: z.number().int().min(-10).max(200).nullable().default(null),
   possession: z.array(possessionSchema).max(4).default([]),
   amenities: z.array(z.string().max(40)).max(20).default([]),
   localitySlugs: z.array(z.string().max(60)).max(40).default([]),
@@ -113,12 +115,14 @@ export function parsePropertyQuery(sp: URLSearchParams) {
     priceMax: num("maxPrice"),
     areaMin: num("minArea"),
     areaMax: num("maxArea"),
+    floorMin: num("minFloor"),
+    floorMax: num("maxFloor"),
     possession: list("possession"),
     amenities: list("amenities"),
     localitySlugs: list("locality"),
     verifiedOnly: sp.get("verified") === "1",
   });
-  if ((filters.priceMin != null && filters.priceMax != null && filters.priceMin > filters.priceMax) || (filters.areaMin != null && filters.areaMax != null && filters.areaMin > filters.areaMax)) {
+  if ((filters.floorMin != null && filters.floorMax != null && filters.floorMin > filters.floorMax) || (filters.priceMin != null && filters.priceMax != null && filters.priceMin > filters.priceMax) || (filters.areaMin != null && filters.areaMax != null && filters.areaMin > filters.areaMax)) {
     throw new z.ZodError([{ code: "custom", path: ["filters"], message: "Minimum cannot exceed maximum." }]);
   }
 

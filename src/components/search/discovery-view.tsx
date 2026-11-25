@@ -81,7 +81,7 @@ export function DiscoveryView({
   const resultsHeader = (
     <>
       <div className="space-y-3 border-b border-line px-4 py-3">
-        <SearchInput size="md" placeholder="Search or describe what you want…" />
+        <SearchInput size="md" placeholder="Add localities or describe what you want…" localities={localities} />
         <FilterBar />
       </div>
       <div className="flex items-center justify-between border-b border-line px-4 py-2.5">

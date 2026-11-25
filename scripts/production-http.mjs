@@ -19,6 +19,14 @@ assert.notEqual(nextHome.headers.get("content-security-policy"), csp, "Nonce mus
 assert.ok(nextHome.headers.get("cache-control")?.includes("no-store"));
 assert.equal((await request("/api/health")).status, 200);
 
+for (const path of ["/brochures/missing.pdf", "/plans/missing.pdf"]) {
+  const doc = await request(path);
+  assert.equal(doc.headers.get("x-frame-options"), "SAMEORIGIN");
+  assert.ok(doc.headers.get("content-security-policy")?.includes("frame-ancestors 'self'"));
+}
+const project = await request("/project/verdant-sanctuary");
+assert.equal(project.headers.get("x-frame-options"), "DENY");
+assert.ok(project.headers.get("content-security-policy")?.includes("frame-ancestors 'none'"));
 const json = { "content-type": "application/json" };
 const loginHtml = await (await request("/login?next=%2Fproperty%2Fselected-home")).text();
 const signupHtml = await (await request("/signup?next=%2Fproperty%2Fselected-home")).text();

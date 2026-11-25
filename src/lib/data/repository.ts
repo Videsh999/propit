@@ -143,6 +143,8 @@ function passesFilters(p: Property, f: PropertyFilters, store = getStore()): boo
 
   if (f.areaMin != null && p.builtupAreaSqft < f.areaMin) return false;
   if (f.areaMax != null && p.builtupAreaSqft > f.areaMax) return false;
+  if (f.floorMin != null && p.floor < f.floorMin) return false;
+  if (f.floorMax != null && p.floor > f.floorMax) return false;
   if (f.possession.length && !f.possession.includes(p.possession)) return false;
   if (f.amenities.length && !f.amenities.every((a) => p.amenities.includes(a))) return false;
   if (f.verifiedOnly && !p.isVerified) return false;

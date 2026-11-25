@@ -1,11 +1,13 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useRef } from "react";
 import { SlidersHorizontal, X, RotateCcw } from "lucide-react";
 import { useDiscovery } from "@/store/discovery";
 import { Chip } from "@/components/ui/chip";
 import { Button } from "@/components/ui/button";
 import { activeFilterCount } from "@/lib/data/filters";
+import { RangeFilter } from "@/components/filters/range-filter";
 import { AMENITIES } from "@/lib/data/developers";
 import { formatPrice, possessionLabel, propertyTypeLabel, bhkLabel } from "@/lib/format";
 import type { PossessionStatus, PropertyType } from "@/types";
@@ -36,14 +38,30 @@ const BHK = [0, 1, 2, 3, 4, 5];
  */
 const BHK_INLINE = [1, 2, 3, 4, 5];
 
-const BUY_STOPS = [0, 5e6, 1e7, 1.5e7, 2e7, 3e7, 4e7, 6e7, 1e8];
-const RENT_STOPS = [0, 15000, 25000, 40000, 60000, 100000, 200000, 500000];
+
 
 export function FilterBar({ hideInline = false }: { hideInline?: boolean } = {}) {
   const { filters, setFilters, toggleArrayFilter, resetFilters, filtersOpen, setFiltersOpen } =
     useDiscovery();
   const count = activeFilterCount(filters);
-  const stops = filters.listingType === "rent" ? RENT_STOPS : BUY_STOPS;
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const frame = requestAnimationFrame(() => panelRef.current?.querySelector<HTMLButtonElement>("button")?.focus());
+    function keydown(event: KeyboardEvent) {
+      if (event.key === "Escape") setFiltersOpen(false);
+      if (event.key !== "Tab") return;
+      const elements = panelRef.current?.querySelectorAll<HTMLElement>('button, input, select, a[href], [tabindex="0"]');
+      if (!elements?.length) return;
+      const first = elements[0], last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+    document.addEventListener("keydown", keydown);
+    return () => { cancelAnimationFrame(frame); document.removeEventListener("keydown", keydown); previous?.focus(); };
+  }, [filtersOpen, setFiltersOpen]);
+
 
   return (
     <>
@@ -129,7 +147,8 @@ export function FilterBar({ hideInline = false }: { hideInline?: boolean } = {})
             />
             <motion.div
               role="dialog"
-              aria-label="Advanced filters"
+              ref={panelRef}
+              aria-label="Advanced filters" aria-modal="true"
               initial={{ x: 32, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 32, opacity: 0 }}
@@ -176,47 +195,9 @@ export function FilterBar({ hideInline = false }: { hideInline?: boolean } = {})
                   </div>
                 </Section>
 
-                <Section
-                  title="Budget"
-                  aside={
-                    filters.priceMin != null || filters.priceMax != null ? (
-                      <span className="tnum text-[12px] text-muted">
-                        {filters.priceMin != null ? formatPrice(filters.priceMin) : "Any"} –{" "}
-                        {filters.priceMax != null ? formatPrice(filters.priceMax) : "Any"}
-                      </span>
-                    ) : null
-                  }
-                >
-                  <div className="grid grid-cols-2 gap-2">
-                    <Select
-                      label="Minimum"
-                      value={filters.priceMin}
-                      options={stops}
-                      onChange={(v) => setFilters({ priceMin: v })}
-                    />
-                    <Select
-                      label="Maximum"
-                      value={filters.priceMax}
-                      options={stops}
-                      onChange={(v) => setFilters({ priceMax: v })}
-                    />
-                  </div>
-                </Section>
-
-                <Section title="Built-up area (sq.ft)">
-                  <div className="grid grid-cols-2 gap-2">
-                    <NumberField
-                      label="Minimum"
-                      value={filters.areaMin}
-                      onChange={(v) => setFilters({ areaMin: v })}
-                    />
-                    <NumberField
-                      label="Maximum"
-                      value={filters.areaMax}
-                      onChange={(v) => setFilters({ areaMax: v })}
-                    />
-                  </div>
-                </Section>
+                <RangeFilter label={filters.listingType === "rent" ? "Monthly rent" : "Budget"} value={[filters.priceMin, filters.priceMax]} max={filters.listingType === "rent" ? 500000 : 100000000} step={filters.listingType === "rent" ? 1000 : 100000} format={value => formatPrice(value)} onChange={([priceMin, priceMax]) => setFilters({ priceMin, priceMax })} />
+                <RangeFilter label="Built-up area (sq.ft)" value={[filters.areaMin, filters.areaMax]} max={10000} step={50} format={value => `${value.toLocaleString("en-IN")} sq.ft`} onChange={([areaMin, areaMax]) => setFilters({ areaMin, areaMax })} />
+                <RangeFilter label="Floor" value={[filters.floorMin, filters.floorMax]} max={200} limit={200} step={1} format={value => value === 0 ? "Ground" : `Floor ${value}`} onChange={([floorMin, floorMax]) => setFilters({ floorMin, floorMax })} />
 
                 <Section title="Possession">
                   <div className="flex flex-wrap gap-1.5">
@@ -293,60 +274,5 @@ function Section({
       </div>
       {children}
     </section>
-  );
-}
-
-function Select({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: number | null;
-  options: number[];
-  onChange: (v: number | null) => void;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-[11px] text-faint">{label}</span>
-      <select
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
-        className="h-10 w-full rounded-[var(--r-sm)] border border-line bg-raised px-2.5 text-[14px] text-ink outline-none focus:border-[var(--accent-line)]"
-      >
-        <option value="">Any</option>
-        {options.filter((o) => o > 0).map((o) => (
-          <option key={o} value={o}>
-            {formatPrice(o)}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function NumberField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number | null;
-  onChange: (v: number | null) => void;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-[11px] text-faint">{label}</span>
-      <input
-        type="number"
-        min={0}
-        step={50}
-        value={value ?? ""}
-        placeholder="Any"
-        onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
-        className="tnum h-10 w-full rounded-[var(--r-sm)] border border-line bg-raised px-2.5 text-[14px] text-ink outline-none placeholder:text-faint focus:border-[var(--accent-line)]"
-      />
-    </label>
   );
 }

@@ -1,6 +1,6 @@
 import { SITE_ORIGIN } from "@/lib/site-url";
 import type { MetadataRoute } from "next";
-import { allLocalities, allProjects } from "@/lib/data/repository";
+import { allDevelopers, allLocalities, allProjects } from "@/lib/data/repository";
 import { getStore, prepareStore } from "@/lib/data/store";
 
 const BASE = SITE_ORIGIN;
@@ -14,6 +14,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     [
       { url: BASE, changeFrequency: "daily", priority: 1 },
       { url: `${BASE}/search`, changeFrequency: "hourly", priority: 0.9 },
+      { url: `${BASE}/developers`, changeFrequency: "weekly", priority: 0.7 },
       { url: `${BASE}/projects`, changeFrequency: "daily", priority: 0.8 },
       { url: `${BASE}/localities`, changeFrequency: "weekly", priority: 0.8 },
       { url: `${BASE}/sell`, changeFrequency: "monthly", priority: 0.6 },
@@ -23,6 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...statics,
+    ...allDevelopers().map(developer => ({ url: `${BASE}/developer/${developer.slug}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.6 })),
     ...allLocalities().map((l) => ({
       url: `${BASE}/locality/${l.slug}`,
       lastModified: now,

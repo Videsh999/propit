@@ -9,7 +9,7 @@ import { formatArea, formatPrice, formatRent, propertyTypeLabel } from "@/lib/fo
 import { configurationLabel, filterProjectListings, type ProjectListing, type ProjectSort } from "@/lib/data/project-presentation";
 import type { ListingType, PropertyType } from "@/types";
 
-export function ProjectInventory({ listings }: { listings: ProjectListing[] }) {
+export function ProjectInventory({ listings, configurations: offered = [] }: { listings: ProjectListing[]; configurations?: string[] }) {
   const [mode, setMode] = useState<ListingType>("buy");
   const [type, setType] = useState<PropertyType | "">("");
   const [configuration, setConfiguration] = useState("");
@@ -18,7 +18,7 @@ export function ProjectInventory({ listings }: { listings: ProjectListing[] }) {
   const active = listings.filter(listing => listing.listingType === mode);
   const types = [...new Set(active.map(listing => listing.propertyType))];
   const scoped = type ? active.filter(listing => listing.propertyType === type) : active;
-  const configurations = [...new Set(scoped.map(configurationLabel))].sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+  const configurations = [...new Set([...offered, ...scoped.map(configurationLabel)])].sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
   const results = filterProjectListings(listings, { mode, type, configuration, sort });
   const shown = expanded ? results : results.slice(0, 6);
 

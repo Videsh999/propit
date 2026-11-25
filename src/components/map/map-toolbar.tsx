@@ -23,6 +23,7 @@ import {
   UtensilsCrossed,
   X,
 } from "lucide-react";
+import { SearchInput } from "@/components/search/search-input";
 import { useDiscovery, type DrawMode } from "@/store/discovery";
 import { usePoiViewport } from "@/lib/hooks/use-poi-viewport";
 import { useBoundsDrift } from "@/lib/hooks/use-bounds-drift";
@@ -33,9 +34,6 @@ import { cn } from "@/lib/utils";
 
 type LocalityLite = Pick<Locality, "slug" | "name" | "center">;
 
-const PRESET_KM = [1, 2, 3, 5, 10];
-const MIN_KM = 0.5;
-const MAX_KM = 20;
 
 /**
  * Categories offered in the Nearby panel, in the order a buyer asks about them.
@@ -256,95 +254,28 @@ function useRadiusOrigin(localities: LocalityLite[]): { center: LatLng; label: s
 }
 
 export function RadiusPanel({ localities }: { localities: LocalityLite[] }) {
-  const radius = useDiscovery((s) => s.radius);
-  const setRadius = useDiscovery((s) => s.setRadius);
-  const setUseBounds = useDiscovery((s) => s.setUseBounds);
+  const radius = useDiscovery(state => state.radius);
+  const pinning = useDiscovery(state => state.radiusPinning);
   const origin = useRadiusOrigin(localities);
-
-  // Draft lets the slider track the thumb smoothly while the committed radius
-  // — which costs a query — only changes when the user lets go.
   const [draft, setDraft] = useState<number | null>(null);
-  const km = draft ?? radius?.km ?? 5;
-
-  if (!origin) {
-    return <p className="text-[12px] leading-relaxed text-faint">Waiting for the map to settle.</p>;
+  const km = draft ?? radius?.km ?? 2;
+  const distance = (value: number) => value < 1 ? `${Math.round(value * 1000)} m` : `${value} km`;
+  function commit(next: number, center = origin?.center, label = origin?.label) {
+    if (!center) return;
+    const store = useDiscovery.getState(); store.setDrawMode("none"); store.setUseBounds(false); store.setPolygon(null); store.select(null); store.selectLocality(null); store.setFilters({ localitySlugs: [] });
+    store.setRadius({ center, km: next, label: label ?? "Dropped pin" }); store.flyTo(center, next <= 1 ? 14.6 : next <= 3 ? 13.5 : next <= 5 ? 12.8 : 11.8);
   }
-
-  const commit = (next: number) => {
-    setUseBounds(false);
-    setRadius({ center: origin.center, km: next, label: origin.label, anchorId: radius?.anchorId });
-  };
-
-  return (
-    <>
-      <p className="eyebrow mb-3">Radius from {origin.label}</p>
-
-      {/* A fixed five-column grid rather than flex-wrap: the presets are one
-          scale, and "10 km" dropping onto its own line broke that reading. */}
-      <div className="grid grid-cols-5 gap-1.5">
-        {PRESET_KM.map((preset) => (
-          <button
-            key={preset}
-            onClick={() => {
-              setDraft(null);
-              commit(preset);
-            }}
-            aria-pressed={radius?.km === preset}
-            className={cn(
-              "tnum h-8 rounded-[var(--r-sm)] border text-[13px] transition-colors duration-[160ms]",
-              radius?.km === preset
-                ? "border-[var(--accent)] bg-accent text-[var(--accent-ink)]"
-                : "border-line bg-raised text-ink hover:border-line-strong",
-            )}
-          >
-            {preset}
-            <span className="ml-0.5 text-[11px] opacity-70">km</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-4 flex items-center gap-3">
-        <input
-          type="range"
-          min={MIN_KM}
-          max={MAX_KM}
-          step={0.5}
-          value={km}
-          aria-label="Search radius in kilometres"
-          onChange={(e) => setDraft(Number(e.target.value))}
-          onPointerUp={() => {
-            if (draft != null) commit(draft);
-            setDraft(null);
-          }}
-          onKeyUp={() => {
-            if (draft != null) commit(draft);
-            setDraft(null);
-          }}
-          className="propit-range min-w-0 flex-1"
-          style={{ ["--fill" as string]: `${((km - MIN_KM) / (MAX_KM - MIN_KM)) * 100}%` }}
-        />
-        <span className="tnum w-[58px] shrink-0 text-right text-[13px] font-medium text-ink">
-          {km} km
-        </span>
-      </div>
-
-      <p className="mt-3 text-[12px] leading-relaxed text-muted">
-        Homes outside the ring fade rather than disappear, so you keep your bearings.
-      </p>
-
-      {radius && (
-        <button
-          onClick={() => {
-            setDraft(null);
-            setRadius(null);
-          }}
-          className="mt-3 text-[12px] text-muted underline decoration-[var(--line-strong)] underline-offset-4 transition-colors hover:text-ink"
-        >
-          Clear the radius
-        </button>
-      )}
-    </>
-  );
+  return <div>
+    <h3 className="mb-2 text-base font-semibold">Pin your starting point</h3>
+    <SearchInput size="md" locationsOnly placeholder="Search Wipro Circle, a landmark…" onPickLocation={place => { useDiscovery.getState().setRadiusPinning(false); if (place.location) commit(km, place.location, place.label); }} />
+    <button type="button" aria-pressed={pinning} onClick={() => useDiscovery.getState().setRadiusPinning(!pinning)} className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line bg-raised text-sm font-semibold text-accent"><MapPin size={16} />{pinning ? "Click on the map to place pin" : "Drop a pin on the map"}</button>
+    <p className="mt-3 text-sm text-muted">From <strong className="text-ink">{radius?.label ?? origin?.label ?? "your chosen point"}</strong></p>
+    <div className="mt-3 grid grid-cols-3 gap-2">{[.5, 1, 2, 3, 5, 10].map(value => <button key={value} type="button" aria-pressed={radius?.km === value} onClick={() => { setDraft(null); commit(value); }} className="min-h-10 rounded-xl border border-line bg-raised text-sm font-semibold text-accent aria-pressed:bg-accent aria-pressed:text-accent-ink">{distance(value)}</button>)}</div>
+    <label className="mt-4 block text-xs text-muted">Radius in metres<input type="range" min={250} max={20000} step={250} value={km * 1000} aria-label="Search radius in metres" aria-valuetext={distance(km)} onChange={event => setDraft(Number(event.target.value) / 1000)} onPointerUp={() => { if (draft != null) commit(draft); setDraft(null); }} onKeyUp={() => { if (draft != null) commit(draft); setDraft(null); }} className="propit-range mt-2 w-full" /></label>
+    <p className="mt-2 text-right text-sm font-semibold text-accent">{distance(km)}</p>
+    <p className="mt-2 text-xs leading-relaxed text-muted">Drag the centre pin to move your search. Distance is measured in a straight line.</p>
+    {radius && <button type="button" onClick={() => { useDiscovery.getState().setRadius(null); useDiscovery.getState().setRadiusPinning(false); setDraft(null); }} className="mt-3 min-h-9 text-sm font-semibold text-accent">Clear radius</button>}
+  </div>;
 }
 
 // ---------------------------------------------------------------------------

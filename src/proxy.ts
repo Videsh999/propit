@@ -5,11 +5,13 @@ import { isProductionDeployment, supabaseConfig } from "@/lib/deployment";
 export async function proxy(request: NextRequest) {
   const nonce = crypto.randomUUID().replaceAll("-", "");
   const development = process.env.NODE_ENV === "development";
+  // Only published PDF documents may be embedded by this site's reader.
+  const documentReader = /^\/(?:brochures|plans)\/[^?]*\.pdf$/i.test(request.nextUrl.pathname);
   const policy = [
     "default-src 'self'", `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${development ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob: https:", "font-src 'self' data:",
     `connect-src 'self' https: wss:${development ? " http: ws:" : ""}`, "worker-src 'self' blob:",
-    "media-src 'self' https: blob:", "frame-src https:", "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'",
+    "media-src 'self' https: blob:", "frame-src 'self' https:", "object-src 'none'", "base-uri 'self'", "form-action 'self'", documentReader ? "frame-ancestors 'self'" : "frame-ancestors 'none'",
   ].join("; ");
   const forwarded = new Headers(request.headers);
   forwarded.set("x-nonce", nonce);
@@ -38,6 +40,7 @@ export async function proxy(request: NextRequest) {
     response.headers.set("Cache-Control", "private, no-store");
   }
   response.headers.set("Content-Security-Policy", policy);
+  if (documentReader) response.headers.set("X-Frame-Options", "SAMEORIGIN");
   if (!isProductionDeployment()) response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;
 }

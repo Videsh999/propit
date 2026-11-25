@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { communityUpdateSchema } from "@/lib/data/community";
 import { latLngSchema, boundsSchema, listingTypeSchema, propertyTypeSchema, possessionSchema, poiCategorySchema } from "@/lib/api/schema";
 
 const text = z.string().trim().max(20_000);
@@ -14,6 +15,8 @@ const url = z.string().max(2000).refine(value => {
 }, "Use an HTTPS URL or a local asset path.");
 const percent = z.number().min(0).max(100);
 const profile = z.object({
+  communityUpdates: z.array(communityUpdateSchema).max(100).optional(),
+  brochurePages: z.array(url).max(100).optional(),
   type: z.enum(["Apartment", "Villa", "Plot", "Mixed-use"]).optional(), category: z.enum(["Residential", "Commercial", "Mixed"]).optional(),
   launchDate: text.optional(), completionDate: text.optional(), reraCompletionDate: text.optional(),
   unitSizeRangeSqft: z.tuple([amount, amount]).optional(), unitFacings: strings.optional(), floorSpaceIndex: amount.optional(),
